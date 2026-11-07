@@ -40,11 +40,28 @@ const APP='file://'+require('path').resolve(__dirname,'..','index.html');
   await page.keyboard.press('Period'); await page.waitForTimeout(300);
   const t1=await page.evaluate(()=>document.querySelector('#video').currentTime);
   ok(Math.abs(t1-(1+1/30))<0.01,'step frame = 1/30 → '+t1.toFixed(4));
+  // --- arrows in file mode stay 5s / Shift 1s; Space must not scroll the page
+  await page.evaluate(()=>{document.querySelector('#video').currentTime=1;}); await page.waitForTimeout(300);
+  await page.keyboard.press('ArrowRight'); await page.waitForTimeout(300);
+  const ta=await page.evaluate(()=>document.querySelector('#video').currentTime);
+  ok(Math.abs(ta-6)<0.05,'file mode → = +5s: '+ta);
+  await page.keyboard.press('Shift+ArrowLeft'); await page.waitForTimeout(300);
+  const tb=await page.evaluate(()=>document.querySelector('#video').currentTime);
+  ok(Math.abs(tb-5)<0.05,'file mode Shift+← = -1s: '+tb);
+  await page.click('#btnPlay'); await page.waitForTimeout(200);
+  const y0=await page.evaluate(()=>[scrollY,document.scrollingElement.scrollTop,document.querySelector('.left').getBoundingClientRect().top]);
+  await page.keyboard.press('Space'); await page.waitForTimeout(250); await page.keyboard.press('Space'); await page.waitForTimeout(250);
+  const y1=await page.evaluate(()=>[scrollY,document.scrollingElement.scrollTop,document.querySelector('.left').getBoundingClientRect().top]);
+  ok(JSON.stringify(y0)===JSON.stringify(y1),'Space after clicking ▶ does not scroll/shift layout: '+JSON.stringify([y0,y1]));
+  await page.evaluate(()=>document.querySelector('#video').pause());
   // --- pins: create, drag, right-click
   await page.evaluate(()=>{document.querySelector('#video').currentTime=2;}); await page.waitForTimeout(300);
   const ob=await page.locator('#overlay').boundingBox();
   await page.mouse.click(ob.x+ob.width*0.30, ob.y+ob.height*0.40); await page.waitForTimeout(250);
-  await page.keyboard.press('q'); await page.keyboard.press('Enter'); await page.waitForTimeout(200);
+  ok(await page.evaluate(()=>document.activeElement&&document.activeElement.id==='cText'),'textarea focused right after pin click');
+  await page.keyboard.press('Alt+q'); await page.waitForTimeout(80);
+  ok((await page.inputValue('#cText'))==='컷 더 잘라주세요','Alt+Q inserts preset while typing');
+  await page.keyboard.press('Enter'); await page.waitForTimeout(200);
   let m=await page.evaluate(()=>JSON.parse(JSON.stringify(window.__S?window.__S.memos:null)));
   // expose S via a tiny hook: read from autosave instead
   const memos=async()=>{const d=await page.evaluate(()=>new Promise(r=>{const q=indexedDB.open('hhss-review',1);q.onsuccess=()=>{const t=q.result.transaction('kv','readonly').objectStore('kv');const g=t.getAll();g.onsuccess=()=>r(g.result);};}));return d.flatMap(x=>x.memos||[]);};
@@ -76,7 +93,7 @@ const APP='file://'+require('path').resolve(__dirname,'..','index.html');
   await page.keyboard.press('Escape'); // cancel → new empty memo removed entirely
   await page.waitForTimeout(200);
   await page.mouse.click(ob.x+ob.width*0.5, ob.y+ob.height*0.5); await page.waitForTimeout(250);
-  await page.keyboard.press('Enter'); await page.keyboard.press('Enter'); await page.waitForTimeout(200); // save with empty text (pin only)
+  await page.keyboard.press('Enter'); await page.waitForTimeout(200); // save with empty text (pin only)
   ok((await page.textContent('#count'))==='2','pin-only memo saved (count 2)');
   const pin3=await page.locator('#overlay .pin.sel').first().boundingBox();
   await page.mouse.click(pin3.x+pin3.width/2,pin3.y+pin3.height/2,{button:'right'}); await page.waitForTimeout(600);

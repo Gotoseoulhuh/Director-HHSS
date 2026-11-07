@@ -43,8 +43,8 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
   }
   await evaluate(`(async()=>{
     let html=await (await fetch('/')).text();
-    html=html.replace('renderChips();renderSpeed();updateCapUI();render();',
-      'window.testApi={S,YtP,Cap,togglePlay,stepFrame,textKakao,selectMemo,openYouTube,createMemo,finishEdit,loadProject,projectData,reportHTML,render,setAnnotationTool,undoDelete,deleteMemo,parseYtId,setPlayer:p=>P=p};renderChips();renderSpeed();updateCapUI();render();');
+    html=html.replace('renderChips();renderSpeed();render();',
+      'window.testApi={S,YtP,togglePlay,stepFrame,textKakao,selectMemo,openYouTube,createMemo,finishEdit,loadProject,projectData,reportHTML,render,setAnnotationTool,undoDelete,deleteMemo,parseYtId,setPlayer:p=>P=p};renderChips();renderSpeed();render();');
     document.open();document.write(html);document.close();
   })()`);
   const result = await evaluate(`(async()=>{
@@ -110,35 +110,48 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
       await delay(200);
     }
     assert.equal(playback.state,1,'YouTube must play: '+JSON.stringify(playback));
-    assert.equal(await evaluate('testApi.Cap.start()'),true,'Tab capture must connect');
     await evaluate('testApi.YtP.pause();testApi.YtP.seek(10)');
-    await delay(2000);
+    await delay(1500);
     console.log(await evaluate(`(async()=>{
       const a=testApi,m=await a.createMemo({x:40,y:50});
-      if(!m||m.t<9||m.t>12||!m.thumb.startsWith('data:image/'))throw Error('YouTube captured point memo '+JSON.stringify({memo:m&&{t:m.t,thumb:m.thumb.slice(0,30)},cap:a.Cap.active,cropped:a.Cap.cropped,dim:[a.Cap.vid.videoWidth,a.Cap.vid.videoHeight],rect:document.querySelector('#overlay').getBoundingClientRect().toJSON(),state:a.YtP._state,time:a.YtP.time(),error:a.YtP._captureError}));
-      if(document.querySelector('#freezeFrame').hidden)throw Error('Clean paused frame missing');
+      if(!m||m.t<9.9||m.t>10.6||m.thumb!=='')throw Error('YouTube point memo must record time+position without capture '+JSON.stringify(m&&{t:m.t,thumb:m.thumb}));
+      if(document.activeElement!==document.querySelector('#cText'))throw Error('Text box focused after pin');
+      const f=document.querySelector('#ytFrame');if(!f||!(parseFloat(f.style.top)<0))throw Error('Player cropped (negative top) '+(f&&f.style.cssText));
+      if(!document.querySelector('#ytShield'))throw Error('Pointer shield over player');
       a.finishEdit('save');
       a.setAnnotationTool('draw');
       const el=document.querySelector('#overlay'),r=el.getBoundingClientRect();
       for(const [type,x,y] of [['pointerdown',0.2,0.2],['pointermove',0.4,0.4],['pointerup',0.6,0.5]])
         el.dispatchEvent(new PointerEvent(type,{pointerId:1,button:0,clientX:r.left+r.width*x,clientY:r.top+r.height*y,bubbles:true}));
-      await new Promise(r=>setTimeout(r,1000));
+      await new Promise(r=>setTimeout(r,500));
       const drawn=a.S.memos.find(m=>m.strokes&&m.strokes.length&&m.t>9);
       if(!drawn)throw Error('YouTube link-only drawing');
       a.finishEdit('save');
-      a.selectMemo(m.id,true);
-      if(document.querySelector('#freezeFrame').src!==m.thumb)throw Error('Saved capture preview');
       if(!a.textKakao().includes('X 40.0%, Y 50.0%'))throw Error('YouTube Kakao coordinates');
-      return 'PASS: live YouTube playback, tab capture, clean pause, seek, automatic thumbnail, drawing, saved capture preview, coordinates';
+      if(!document.querySelector('.memo .thumb.yt'))throw Error('YouTube card shows position diagram');
+      return 'PASS: live YouTube playback, pause, seek, point memo without capture, focus, cropped player, drawing, diagram card, coordinates';
     })()`));
+    const t0=await evaluate('testApi.YtP.time()');
     await evaluate('testApi.stepFrame(1)');
-    await delay(2000);
-    console.log(await evaluate(`(()=>{
-      const img=document.querySelector('#freezeFrame');
-      if(img.hidden||!testApi.YtP.paused()||Math.abs(+img.dataset.time-testApi.YtP.time())>0.3)throw Error('Frame step must refresh clean paused image');
-      return 'PASS: frame button refreshes captured paused scene';
-    })()`));
+    await delay(1200);
+    console.log('frame step: '+t0+' → '+await evaluate('testApi.YtP.time()'));
+    assert.ok(Math.abs(await evaluate('testApi.YtP.time()')-(t0+1/30))<0.05,'Frame step must advance 1/30s on YouTube');
   }
+  // 유튜브 모드 키 매핑(가짜 플레이어): ← → 1프레임, Shift+← → 5초
+  console.log(await evaluate(`(()=>{
+    const a=testApi,Y=a.YtP;let t=12;const prev={player:Y.player,ready:Y._ready};
+    Y.player={getCurrentTime:()=>t,seekTo:x=>{t=x;},pauseVideo(){},playVideo(){},getDuration:()=>100,getPlaybackRate:()=>1,destroy(){}};Y._ready=true;Y._target=null;
+    a.setPlayer(Y);a.S.mode='yt';
+    const key=(code,shift)=>document.body.dispatchEvent(new KeyboardEvent('keydown',{code,key:code==='ArrowLeft'?'ArrowLeft':'ArrowRight',shiftKey:!!shift,bubbles:true,cancelable:true}));
+    key('ArrowRight');const t1=Y.time();
+    if(Math.abs(t1-(12+1/30))>0.001)throw Error('YouTube → should step 1 frame: '+t1);
+    key('ArrowRight');const t2=Y.time();
+    if(Math.abs(t2-(12+2/30))>0.001)throw Error('Consecutive frame steps must accumulate (pending seek target): '+t2);
+    key('ArrowLeft',true);const t3=Y.time();
+    if(Math.abs(t3-(12+2/30-5))>0.001)throw Error('YouTube Shift+← should jump 5s: '+t3);
+    Y.player=prev.player;Y._ready=prev.ready;Y._target=null;a.S.mode='file';
+    return 'PASS: YouTube arrow keys = 1 frame, Shift = 5s, consecutive steps accumulate';
+  })()`));
   const report=await evaluate('testApi.reportHTML()');
   for(const script of report.matchAll(/<script(?:\s[^>]*)?>([\s\S]*?)<\/script>/g)){
     if(!script[0].includes('application/json'))new vm.Script(script[1]);
@@ -162,8 +175,6 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     if(document.querySelector('#commentCount').textContent!=='0')throw Error('Comments belong to individual slides');
     document.querySelector('#nextSlide').click();
     if(document.querySelector('#commentCount').textContent!=='1')throw Error('Comment preserved after slide change');
-    const clip=document.querySelector('#playClip');
-    if(clip){clip.click();if(!document.querySelector('#reportVideo').src.includes('&end='))throw Error('Report clip range');document.querySelector('#closeVideo').click();}
     return 'PASS: slideshow layout, film roll, previous/next, keyboard navigation, comments per slide, comment escaping, excerpt controls';
   })()`));
   const saved=await evaluate(`(async()=>{

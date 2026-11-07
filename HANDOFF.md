@@ -4,10 +4,24 @@
 
 ## 먼저 확인할 것
 
-- 이 폴더는 **동작하는 앱 전체**입니다. 서버 연결 코드와 SQL까지 들어 있지만, **실제 Supabase 프로젝트와 GitHub Pages에는 아직 연결·배포하지 않았습니다** (운영자의 URL·anon 키를 아직 받지 못함). 연결 절차는 `SETUP.md`.
+- 이 폴더는 **동작하는 앱 전체**입니다. GitHub Pages에 배포되어 있고(아래 주소), 서버 연결 코드와 SQL도 들어 있지만 **실제 Supabase 프로젝트에는 아직 연결하지 않았습니다** (운영자의 URL·anon 키를 아직 받지 못함). 연결 절차는 `SETUP.md`.
 - 서버 연결 코드는 Supabase(PostgREST)와 같은 규칙을 구현한 **모의 서버**(`tests/mock_supabase.js`)로 검증했습니다. 실제 서버에서 첫 연결 테스트와 메모 왕복 1회는 운영자가 확인해야 합니다.
 - GitHub 저장소: https://github.com/Gotoseoulhuh/Director-HHSS (2026-11-07 푸시). GitHub Pages: https://gotoseoulhuh.github.io/Director-HHSS/ — `.github/workflows/pages.yml`이 main 푸시마다 자동 배포.
 - 이전 버전(ver1.1)과의 호환: 프로젝트 JSON(v3)·공유 HTML은 그대로 읽힙니다. 불러올 때 메모 id를 **유지**합니다(이전에는 새로 만들었음).
+
+## 2026-11-07 변경 (탭 캡처 제거 등)
+
+| 요청 | 상태 | 비고 |
+|---|---|---|
+| 유튜브: 화면 공유(탭 캡처) 없이 동작 | ✅ | `Cap` 모듈·`getDisplayMedia`·정지 화면(`#freezeFrame`)·`cleanPause` 전부 삭제. 유튜브 메모는 `thumb:''`로 **시간·핀 위치·그림만 기록**. 카드·작성 칸은 영상 비율의 **위치 도식**(`.thumb.none.yt`, 3등분 선 + 핀) |
+| 유튜브 임베드 정리 | ✅ | 플레이어 iframe을 영상 그림 영역보다 위아래로 `ytPad(h)`(높이의 28%, 90~200px)만큼 크게 두고 `#yt{overflow:hidden}`으로 잘라냄 → 일시정지 때 뜨는 유튜브 제목 띠·하단 로고가 그림과 겹치지 않음(그림은 전부 보임). `#ytShield`가 플레이어로 가는 마우스 이벤트를 막아 유튜브 자체 UI가 뜨지 않음. `layoutOverlay()`가 iframe 위치도 계산 |
+| 공유 보고서(HTML)의 유튜브 장면 | ✅ | 웹 주소(https)로 연 보고서는 장면 자리에 **유튜브 플레이어를 임베드**(IFrame API, 같은 크롭 방식)하고 핀·그림을 오버레이. "▶ 이 장면 보기" → 그 시점에서 멈춤, 슬라이드 이동 시 `seekTo`, "앞뒤 3초 재생", Space/클릭으로 재생·정지. 파일(file://)로 열면 유튜브가 재생을 거부하므로 도식 + "유튜브에서 보기" 링크로 대체. 필름 롤·인쇄는 도식 |
+| 비율 선택 제거(자동만) | ✅ | 링크 창의 비율 선택 상자 삭제. `detectYtAspect()` 결과만 사용(`S.ytAspect`). 감지 실패 시 16:9 가정 + 안내. 예외용으로 YouTube 줄의 비율 표시(`#ytAspectInfo`)를 클릭하면 16:9→9:16→4:3→1:1→자동 순환(`S.ytAspectManual`, 그 영상/프로젝트에만 저장, 설정에 저장하지 않음) |
+| 유튜브 방향키 | ✅ | 유튜브 모드: `← →` = 1프레임(`stepFrame`, 기본 FPS 기준 근사), `Shift+← →` = 5초. 영상 파일 모드는 그대로(5초/Shift 1초). `, .`은 양쪽 모두 1프레임. `YtP.seek()`가 요청 시각을 `_target`으로 기억하고 `time()`이 플레이어가 따라올 때까지 그 값을 돌려줘 **연타해도 누적**됨(IFrame API의 `getCurrentTime()`은 seek 직후 옛값을 주기 때문) |
+| 핀·그리기 직후 바로 입력 | ✅ | `startEdit()`가 항상 `focusText()` (이전엔 새 메모면 blur). 그리기 획을 기존 메모에 추가할 때도 포커스. 입력 중 문구 넣기는 **Alt+Q/W/E/R**(한/영 입력 상태와 무관, IME 229 문제 회피) 또는 문구 버튼 클릭. 입력칸 밖에서는 Q/W/E/R 그대로. `Tab`은 입력칸에서 잠시 나가기(단축키 모드) |
+| Space 흔들림 / 일시정지 제목 겹침 | ✅ | 원인: 유튜브에서 Space로 멈출 때마다 `ensureCapture()`가 화면 공유 선택창을 띄우고, 공유가 켜지면 크롬 상단에 공유 알림 띠가 생겨 페이지가 아래로 밀렸다가 돌아옴 + `cleanPause`가 0.25배속으로 잠깐 재생. 캡처 제거로 해결. `keyup` Space도 `preventDefault`(포커스된 버튼 재클릭·스크롤 방지). 제목 겹침은 유튜브 플레이어 자체의 일시정지 UI → 위 크롭으로 숨김 |
+
+검증: `tests/t_dboard1.js`(입력칸 포커스, Alt+Q, 파일 모드 방향키 유지, Space 레이아웃 불변), `review.test.cjs`(가짜 플레이어로 유튜브 방향키 1프레임·Shift 5초·연타 누적), 가짜 `YT.Player`를 주입한 Playwright 점검(크롭 레이아웃, 실드, 비율 표시 순환, 도식 카드, 보고서 임베드/파일 대체 경로) 모두 통과. **실제 유튜브 재생 화면은 이 작업 환경에서 열 수 없어 운영자가 Pages 주소에서 확인해야 함** — 특히 일시정지 때 유튜브의 "다른 동영상" 추천 띠가 남는지.
 
 ## 이번에 구현한 것 (2026-11-06)
 
@@ -23,17 +37,18 @@
 | 운영자 확인 화면 | ✅ | 서버 ▾ → 서버 프로젝트 열기(`loadProjects()`/`openServerProject()`), 카드에 작성자 배지, 댓글 수 |
 | SQL/RLS | ✅ 파일만 | `supabase/schema.sql`: 테이블 3개, `is_operator()`(bcrypt 해시 비교, security definer), `has_project_token()`, 정책, 크기 제한 |
 | 기존 보고서·필름 롤·댓글 HTML | ✅ 유지 | `reportHTML()` 변경 없음 |
-| 유튜브 비율 자동 감지 | ✅ | `detectYtAspect()`: oEmbed(youtube.com → noembed.com 프록시) width/height, 세로 전용 썸네일 `vi/ID/oar2.jpg` 크기. 실패 시 16:9 가정 + 안내. 링크 창에서 직접 지정하면 우선(`S.settings.ytAspect`, 'auto' 기본). 프로젝트/클라이언트에는 감지된 비율이 전달됨 |
+| 유튜브 비율 자동 감지 | ✅ | `detectYtAspect()`: oEmbed(youtube.com → noembed.com 프록시) width/height, 세로 전용 썸네일 `vi/ID/oar2.jpg` 크기. 실패 시 16:9 가정 + 안내. (11-07: 링크 창의 선택 상자는 없앴고, 예외 시 비율 표시 클릭으로 바꿈 → `S.ytAspectManual`) 프로젝트/클라이언트에는 감지된 비율이 전달됨 |
 | 유튜브 스크립트 로딩 진단 | ✅ | `loadYtApi()`가 youtube.com → youtube-nocookie.com 순서로 시도, 실패 원인(script-blocked / api-timeout)과 현재 주소를 표시, 다시 시도 버튼 |
 | 자동 저장 용량 | ✅ | localStorage(5MB) → IndexedDB(`KV`). 썸네일 뺀 경량 사본은 localStorage `:lite`에 백업 |
-| 유튜브에서 캡처 거부 시 | ✅ | 이전엔 메모 자체가 안 만들어졌음 → 이제 썸네일 없이 만들어지고 안내 토스트 |
+| 유튜브에서 캡처 거부 시 | — | (11-07에 탭 캡처 자체를 없앰. 유튜브 메모는 항상 썸네일 없이 시간·위치만 기록) |
 | HEVC/재생 불가 안내 | ✅ 유지 | 코덱 스니핑(`sniffCodec`) + 안내문 |
 
 ## 아직 하지 않은 것 / 알려진 한계
 
 - **실제 Supabase 연결** — Pages 배포는 끝남. Supabase는 운영자가 SETUP 1~2를 진행하고 URL·anon 키를 `SERVER_DEFAULT`에 채워야 클라이언트 링크 저장이 동작함. 운영자 키는 절대 파일에 넣지 않음.
 - **댓글 서버 동기화** — `comments` 테이블과 읽기(`select=*,comments(*)`)는 준비됐지만, 앱은 아직 댓글을 서버에 **쓰지 않습니다**. 공유 보고서의 댓글은 그 HTML/브라우저에만 남습니다.
-- **썸네일 저장 위치** — DB text 컬럼(base64, 행당 ≤1.2MB). 규모가 커지면 Supabase Storage(버킷 `thumbs`, 경로 `project_id/annotation_id.jpg`)로 옮기고 `annotations.thumb_path` 추가 + Storage RLS를 써야 함. 토큰 헤더가 Storage API까지 전달되는지는 별도 확인 필요해서 이번에는 DB에 넣었음.
+- **유튜브 일시정지 UI** — 제목 띠는 크롭으로 숨겼지만, 유튜브가 일시정지 때 플레이어 안쪽에 띄우는 "다른 동영상" 추천 띠는 공식적으로 끌 수 없음. 실제 화면에서 남는다면 `ytPad()`를 키우거나(아래쪽을 더 잘라냄) 일시정지 중 플레이어 위에 반투명 안내를 덮는 방식을 검토.
+- **썸네일 저장 위치**(파일 프로젝트만 해당) — DB text 컬럼(base64, 행당 ≤1.2MB). 규모가 커지면 Supabase Storage(버킷 `thumbs`, 경로 `project_id/annotation_id.jpg`)로 옮기고 `annotations.thumb_path` 추가 + Storage RLS를 써야 함. 토큰 헤더가 Storage API까지 전달되는지는 별도 확인 필요해서 이번에는 DB에 넣었음.
 - **운영자 인증** — 공유 비밀(운영자 키) 모델. 여러 운영자/감사 로그가 필요하면 Supabase Auth(매직 링크)로 교체: `is_operator()`를 `auth.uid()` 기반으로 바꾸고 앱에 로그인 UI 추가.
 - **실시간** — 폴링. Supabase Realtime을 쓰려면 supabase-js(CDN) 추가 필요.
 - **유튜브 FPS** — IFrame API 한계로 원본 FPS 불가. 임의값을 "자동 감지"로 표시하지 않음. YouTube Data API `fileDetails`는 영상 소유자 OAuth가 필요해 일반 링크에는 쓸 수 없음.
@@ -51,8 +66,7 @@
 | 391 | 유틸 | `fmt`, `toast`, `download`, `copyText`, `parseYtId` |
 | 445 | FPS 판별 | `STD_FPS`, `snapFps`, `effectiveFps`, `setFps/renderFps`, `detectFpsFromFile`, `Measure` |
 | 539 | 파일 플레이어 | `FileP`, `sniffCodec`, `openVideo`, HEVC 안내 |
-| 620 | 유튜브 | `YtP`(cleanPause 포함), `openYouTube`, `YT_FILE_MSG` |
-| 727 | 탭 캡처 | `Cap`, `updateCapUI`, `ensureCapture`, `showFreeze/hideFreeze` |
+| 620 | 유튜브 | `YtP`(`_target` 기반 time/seek), `loadYtApi`, `ytLoadFailMsg`, 비율 `detectYtAspect/applyYtAspect/cycleYtAspect`, `openYouTube`(`#ytFrame`+`#ytShield`), `ytPad` |
 | 781 | 시간 루프 | `renderPins`(드래그 중 재렌더 금지), `tick`, `togglePlay`, `stepFrame` |
 | 813 | 메모 | `changed()`(rev↑·자동 저장·서버 큐), `pushUndo`, `createMemo`, `startEdit/finishEdit`, `removePoint`, `movePoint`, `deleteMemo`(soft), `undoDelete`, `render` |
 | 945 | 저장 | `autoKey`, `KV`(IndexedDB), `restoreAutosaveIfAny`, `projectData`(`remote` 포함), `autosave`, `loadProject`(id 유지) |
@@ -84,4 +98,5 @@ Playwright(선택, `npm i playwright`): `tests/t_dboard1.js`(FPS 30/25/29.97/fas
 2. 댓글 서버 쓰기(`comments` upsert + 앱 내 댓글 입력) — 보고서 HTML의 댓글과 통합.
 3. 썸네일 Storage 이전(규모 커질 때).
 4. 컷별 판정(통과/수정/삭제, 숫자키 1~4) — `verdict` 필드와 단축키 예약됨.
-5. 고객용 사용 설명서(A4 2쪽, 별도 디자인 캔버스로 제작됨)를 링크 기반 흐름으로 갱신.
+5. 고객용 사용 설명서(A4 2쪽, 별도 디자인 캔버스로 제작됨)를 링크 기반 흐름으로 갱신 (탭 캡처 문구 삭제 포함).
+6. 방향키 1프레임 이동을 영상 파일 모드에도 적용할지 운영자와 결정 (지금은 유튜브 모드만).

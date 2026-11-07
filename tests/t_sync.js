@@ -8,7 +8,7 @@ let failures=0; const ok=(c,m)=>{if(c)console.log('ok  -',m);else{console.log('F
   const b=await chromium.launch({executablePath:process.env.CHROME||'/usr/bin/google-chrome',headless:true,args:['--no-sandbox','--mute-audio']});
   const newPage=async()=>{const ctx=await b.newContext({viewport:{width:1400,height:860},acceptDownloads:true});await ctx.route(SB+'/**',mock.handler);const page=await ctx.newPage();page.on('dialog',d=>d.accept());page.__errs=[];page.on('pageerror',e=>page.__errs.push(e.message));return page;};
   const openFile=async(page,f)=>{await page.setInputFiles('#fileVideo',f);await page.waitForFunction(()=>document.querySelector('#video').videoWidth>0);await page.waitForTimeout(400);};
-  const addMemo=async(page,fx,fy,text)=>{const ob=await page.locator('#overlay').boundingBox();await page.mouse.click(ob.x+ob.width*fx,ob.y+ob.height*fy);await page.waitForTimeout(250);await page.keyboard.press('Enter');await page.keyboard.type(text);await page.keyboard.press('Enter');await page.waitForTimeout(150);};
+  const addMemo=async(page,fx,fy,text)=>{const ob=await page.locator('#overlay').boundingBox();await page.mouse.click(ob.x+ob.width*fx,ob.y+ob.height*fy);await page.waitForTimeout(250);/* 핀을 찍으면 입력칸에 바로 커서가 들어감 */await page.keyboard.type(text);await page.keyboard.press('Enter');await page.waitForTimeout(150);};
   const chip=p=>p.textContent('#syncChip');
   const waitChip=async(p,re,ms=6000)=>{await p.waitForFunction(r=>new RegExp(r).test(document.querySelector('#syncChip').textContent),re.source,{timeout:ms}).catch(()=>{});return chip(p);};
 
