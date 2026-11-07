@@ -42,6 +42,7 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     await delay(100);
   }
   await evaluate(`(async()=>{
+    localStorage.setItem('hhss:localOnly','1'); /* 서버 미설정 빌드: 로그인 화면 대신 이 PC 전용 모드 */
     let html=await (await fetch('/')).text();
     html=html.replace('renderChips();renderSpeed();render();',
       'window.testApi={S,YtP,togglePlay,stepFrame,textKakao,selectMemo,openYouTube,createMemo,finishEdit,loadProject,projectData,reportHTML,render,setAnnotationTool,undoDelete,deleteMemo,parseYtId,setPlayer:p=>P=p};renderChips();renderSpeed();render();');

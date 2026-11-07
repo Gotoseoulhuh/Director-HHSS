@@ -8,7 +8,10 @@ const APP='file://'+require('path').resolve(__dirname,'..','index.html');
   page.on('dialog',d=>d.accept());
   const fail=(m)=>{console.log('FAIL:',m);process.exitCode=1;};
   const ok=(c,m)=>c?console.log('ok  -',m):fail(m);
-  await page.goto(APP); await page.evaluate(()=>{localStorage.clear();indexedDB.deleteDatabase('hhss-review');});
+  await page.goto(APP); await page.evaluate(()=>{localStorage.clear();indexedDB.deleteDatabase('hhss-review');}); await page.reload();
+  ok(await page.evaluate(()=>!document.querySelector('#gate').hidden),'no server configured → login screen with local-only option');
+  await page.click('#gateExtra [data-g="local"]'); await page.waitForTimeout(200);
+  ok(await page.evaluate(()=>document.querySelector('#gate').hidden),'local-only mode opens the app');
   const openFile=async(f)=>{await page.setInputFiles('#fileVideo',f);await page.waitForFunction(()=>document.querySelector('#video').videoWidth>0);await page.waitForTimeout(400);};
   const fpsInfo=()=>page.textContent('#fpsInfo');
   // --- FPS: metadata

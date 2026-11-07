@@ -4,10 +4,22 @@
 
 ## 먼저 확인할 것
 
-- 이 폴더는 **동작하는 앱 전체**입니다. GitHub Pages에 배포되어 있고(아래 주소), 서버 연결 코드와 SQL도 들어 있지만 **실제 Supabase 프로젝트에는 아직 연결하지 않았습니다** (운영자의 URL·anon 키를 아직 받지 못함). 연결 절차는 `SETUP.md`.
+- 이 폴더는 **동작하는 앱 전체**입니다. GitHub Pages에 배포되어 있고(아래 주소), 서버 연결 코드와 SQL도 들어 있지만 **실제 Supabase 프로젝트에는 아직 연결하지 않았습니다** (URL·anon 키를 아직 받지 못함). 그 전까지 배포본은 로그인 화면에서 '서버 없이 이 PC에서만 쓰기'만 가능. 연결 절차는 `SETUP.md`.
 - 서버 연결 코드는 Supabase(PostgREST)와 같은 규칙을 구현한 **모의 서버**(`tests/mock_supabase.js`)로 검증했습니다. 실제 서버에서 첫 연결 테스트와 메모 왕복 1회는 운영자가 확인해야 합니다.
 - GitHub 저장소: https://github.com/Gotoseoulhuh/Director-HHSS (2026-11-07 푸시). GitHub Pages: https://gotoseoulhuh.github.io/Director-HHSS/ — `.github/workflows/pages.yml`이 main 푸시마다 자동 배포.
 - 이전 버전(ver1.1)과의 호환: 프로젝트 JSON(v3)·공유 HTML은 그대로 읽힙니다. 불러올 때 메모 id를 **유지**합니다(이전에는 새로 만들었음).
+
+## 2026-11-08 변경 (관리자/클라이언트 분리)
+
+| 요청 | 상태 | 비고 |
+|---|---|---|
+| 관리자 로그인 | ✅ | Supabase Auth 이메일+비밀번호(REST `/auth/v1/token`, supabase-js 없음) → `Auth` 모듈(세션 localStorage/sessionStorage, 만료 60초 전 refresh). 아이디에 @가 없으면 `@hhss.studio`를 붙임. `public.operators`에 등록된 사용자만 `is_operator()`=true. 로그인 화면 `#gate`(관리자/클라이언트 공용), `bootAdmin()`. 서버 미설정 빌드는 "서버 없이 이 PC에서만 쓰기"(`hhss:localOnly`) |
+| 클라이언트 로그인 | ✅ | 프로젝트마다 아이디·비밀번호. `rpc/set_client_credentials`(관리자만, bcrypt 해시 + 토큰 재발급) / `rpc/client_login`(맞으면 토큰, 틀리면 1초 지연 후 null) / `rpc/client_project`(토큰 헤더가 맞을 때 프로젝트 정보). 링크는 `#p=<id>`만, 동봉 HTML에도 토큰 없음. 토큰은 `hhss:client:<pid>`에 보관(재방문 시 로그인 생략), 비번 재설정 시 끊김 → 다시 로그인하면 화면·메모 유지 |
+| 클라이언트 화면 | ✅ | `.op-only` 숨김(대상 영상·프로젝트 열기/저장·서버·⚙), `#btnSend` '빠른 수정 요청'(primary, 안 보낸 개수), 내보내기는 흰 버튼, `#btnHelp` 텍스트 '도움말' → `#mHelpClient`(5단계 안내, 첫 로그인 때 1회 자동) |
+| 버튼 눌러야 전송 | ✅ | `Sync.manual`(클라이언트): enqueue는 큐에만, 자동 flush·재시도 없음. `sendRequests()`가 이름 확인 후 `flush()`; 실패 401/403이면 `authLost` → 재로그인. 큐는 IndexedDB에 남아 새로고침·창 닫기에도 유지 |
+| SQL v2 | ✅ 파일 | `operators`, `projects.client_login/client_pw_hash`, projects는 관리자(authenticated+is_operator)만, anon은 projects 직접 접근 불가, `app_config`(운영자 키) 삭제 |
+
+검증: `tests/t_sync.js` 전면 개편(관리자 로그인 실패/비관리자/성공·유지·로그아웃·토큰 갱신, 클라이언트 로그인 실패/성공(대소문자 무시)·메뉴 숨김·버튼 색, 누르기 전 미전송·이름 요구·전송·작성자, 오프라인 실패 후 재전송, 새로고침 유지, 비번 재설정→재로그인, 보관 시 로그인 거부, 동봉 HTML 로그인), `t_dboard1`·`review.test.cjs`·가짜 유튜브 점검 모두 통과. 실제 Supabase에서는 아직 미검증.
 
 ## 2026-11-07 변경 (탭 캡처 제거 등)
 
@@ -49,7 +61,8 @@
 - **댓글 서버 동기화** — `comments` 테이블과 읽기(`select=*,comments(*)`)는 준비됐지만, 앱은 아직 댓글을 서버에 **쓰지 않습니다**. 공유 보고서의 댓글은 그 HTML/브라우저에만 남습니다.
 - **유튜브 일시정지 UI** — 제목 띠는 크롭으로 숨겼지만, 유튜브가 일시정지 때 플레이어 안쪽에 띄우는 "다른 동영상" 추천 띠는 공식적으로 끌 수 없음. 실제 화면에서 남는다면 `ytPad()`를 키우거나(아래쪽을 더 잘라냄) 일시정지 중 플레이어 위에 반투명 안내를 덮는 방식을 검토.
 - **썸네일 저장 위치**(파일 프로젝트만 해당) — DB text 컬럼(base64, 행당 ≤1.2MB). 규모가 커지면 Supabase Storage(버킷 `thumbs`, 경로 `project_id/annotation_id.jpg`)로 옮기고 `annotations.thumb_path` 추가 + Storage RLS를 써야 함. 토큰 헤더가 Storage API까지 전달되는지는 별도 확인 필요해서 이번에는 DB에 넣었음.
-- **운영자 인증** — 공유 비밀(운영자 키) 모델. 여러 운영자/감사 로그가 필요하면 Supabase Auth(매직 링크)로 교체: `is_operator()`를 `auth.uid()` 기반으로 바꾸고 앱에 로그인 UI 추가.
+- **운영자 인증** — 11-08부터 Supabase Auth + `operators` 표. 관리자를 늘리려면 사용자 추가 후 `operators`에 insert.
+- **클라이언트 로그인 시도 제한** — 실패 시 1초 지연만 있음(계정 잠금 없음). 자동 생성 8자 비밀번호 권장.
 - **실시간** — 폴링. Supabase Realtime을 쓰려면 supabase-js(CDN) 추가 필요.
 - **유튜브 FPS** — IFrame API 한계로 원본 FPS 불가. 임의값을 "자동 감지"로 표시하지 않음. YouTube Data API `fileDetails`는 영상 소유자 OAuth가 필요해 일반 링크에는 쓸 수 없음.
 - **유튜브 + file://** — 재생 거부(referrer 없음). 클라이언트 HTML(동봉용)은 파일 프로젝트에만 권장.
@@ -82,7 +95,7 @@
 
 **프로젝트 JSON(v4)** — `projectData()`: `{app,version:4,title,video{name,size,duration,youtubeId?,aspect?},remote?{projectId,title,source},fps,fpsInfo{value,source,detail,vfr},memos[],savedAt}`
 
-**서버 접근** — 모든 요청에 `apikey`+`Authorization: Bearer <anon>`; 운영자는 `x-operator-key`, 클라이언트는 `x-review-token`. RLS가 헤더를 `request.headers`로 읽어 판정.
+**서버 접근** — 모든 요청에 `apikey`. 관리자는 `Authorization: Bearer <사용자 JWT>`(RLS: `is_operator()` = `operators`에 `auth.uid()` 존재), 클라이언트는 `Authorization: Bearer <anon>` + `x-review-token`(RLS가 `request.headers`로 읽음). 클라이언트는 projects 표를 직접 못 읽고 RPC로만 접근.
 
 ## 검증 방법
 

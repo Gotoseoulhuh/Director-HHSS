@@ -171,6 +171,35 @@ body.client header .title{pointer-events:none}
 .result input{width:100%;border:1px solid #c9daff;border-radius:6px;padding:6px 8px;font:inherit;font-size:12px;background:#fff;margin:4px 0}
 #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1b2130;color:#fff;padding:10px 16px;border-radius:10px;opacity:0;transition:.2s;pointer-events:none;z-index:60;max-width:80vw;text-align:center}
 #toast.on{opacity:1}
+/* 로그인 화면 */
+#gate{position:fixed;inset:0;z-index:80;background:var(--bg);display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto}
+.gate-box{background:#fff;border:1px solid var(--line);border-radius:16px;padding:30px 28px 22px;width:min(380px,100%);box-shadow:0 20px 60px rgba(0,0,0,.08);text-align:center}
+.gate-box img{height:58px;width:auto;margin-bottom:6px}
+.gate-box h2{margin:4px 0 6px;font-size:20px}
+.gate-box p{margin:0 0 18px;color:var(--muted);font-size:13px;line-height:1.6}
+.gate-box form{display:flex;flex-direction:column;gap:12px;text-align:left}
+.gate-box label{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:5px}
+.gate-box input[type=text],.gate-box input[type=password]{border:1px solid var(--line);border-radius:8px;padding:11px 12px;font:inherit;font-size:15px;color:var(--text)}
+.gate-box input:focus{outline:2px solid var(--accent-soft);border-color:var(--accent)}
+.gate-box label.keep{flex-direction:row;align-items:center;gap:6px}
+.gate-box button[type=submit]{padding:12px;font-size:15px;margin-top:2px}
+.gate-msg{min-height:20px;margin-top:12px;font-size:13px;color:#8a1c2e;line-height:1.5}
+.gate-extra{margin-top:6px;font-size:12px;color:var(--muted);line-height:1.8}
+.gate-extra button{background:none;border:0;color:var(--accent);text-decoration:underline;padding:0 3px;font-size:12px}
+body.gated main,body.gated header{visibility:hidden}
+.modal{z-index:90}#toast{z-index:95}
+/* 클라이언트 전용 */
+.client-only{display:none!important}
+body.client .client-only{display:inline-flex!important}
+body.client #btnExport{background:#fff;color:var(--text);border-color:var(--line)}
+#btnSend{font-size:14px;padding:8px 16px;align-items:center}
+#btnHelp{font-weight:700}
+body.client #btnHelp{border-color:var(--accent);color:var(--accent)}
+.modal textarea#pjGuide{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px;font:inherit;font-size:12px;line-height:1.6;margin:6px 0;resize:vertical;background:#fff}
+.help-client .steps{font-size:15px;line-height:1.75;padding-left:22px;margin:6px 0 12px}
+.help-client .steps li{margin-bottom:8px}
+.help-client details{font-size:13px;color:var(--muted);line-height:1.8}
+.help-client summary{cursor:pointer;color:var(--text);font-weight:600}
 </style>
 </head>
 <body>
@@ -191,12 +220,14 @@ body.client header .title{pointer-events:none}
   <div class="menu op-only" id="serverMenu">
     <button class="btn" id="btnServer">서버 ▾</button>
     <div class="dd">
-      <button id="btnNewProject">클라이언트 검수 만들기<small>지금 연 영상으로 프로젝트를 만들고 링크/파일을 전달</small></button>
-      <button id="btnProjects">서버 프로젝트 열기<small>클라이언트가 남긴 수정 요청 확인</small></button>
-      <button id="btnServerSettings">서버 설정<small>Supabase 주소·공개 키·운영자 키</small></button>
+      <button id="btnNewProject">클라이언트 검수 만들기<small>지금 연 영상으로 프로젝트·아이디·비밀번호를 만들어 링크 전달</small></button>
+      <button id="btnProjects">서버 프로젝트 열기<small>클라이언트가 보낸 수정 요청 확인</small></button>
+      <button id="btnServerSettings">서버 설정<small>Supabase 주소·공개 키·이 앱의 공개 주소</small></button>
       <button id="btnDisconnect">서버 연결 끊기<small>이 프로젝트의 서버 동기화 중지</small></button>
+      <button id="btnLogout">로그아웃<small id="logoutWho"></small></button>
     </div>
   </div>
+  <button class="btn primary client-only" id="btnSend" title="찍은 포인트와 메모를 관리자에게 보냅니다">빠른 수정 요청</button>
   <div class="menu" id="exportMenu">
     <button class="btn primary" id="btnExport">내보내기 ▾</button>
     <div class="dd">
@@ -206,8 +237,8 @@ body.client header .title{pointer-events:none}
       <button data-x="pdf">PDF로 내보내기<small>인쇄 창에서 'PDF로 저장'</small></button>
     </div>
   </div>
-  <button class="btn icon" id="btnSettings" title="설정 (자주 쓰는 문구 등)">⚙</button>
-  <button class="btn icon" id="btnHelp" title="전체 단축키 (?)">?</button>
+  <button class="btn icon op-only" id="btnSettings" title="설정 (자주 쓰는 문구 등)">⚙</button>
+  <button class="btn" id="btnHelp" title="사용 방법과 단축키">도움말</button>
   <input type="file" id="fileVideo" accept="video/*,.mp4,.mov,.m4v,.webm,.mkv" hidden>
   <input type="file" id="fileProject" accept=".json,.html,.htm" hidden>
 </header>
@@ -275,11 +306,10 @@ body.client header .title{pointer-events:none}
 </div></div>
 
 <div class="modal" id="mServer"><div class="box">
-  <h3>서버 설정 (운영자)</h3>
-  <p class="note">Supabase의 <b>프로젝트 URL</b>과 <b>anon(public) 키</b>는 공개용이라 배포 파일에 들어가도 됩니다. <b>운영자 키</b>는 이 브라우저에만 저장되며 어떤 파일에도 들어가지 않습니다. service_role 키는 절대 넣지 마세요.</p>
+  <h3>서버 설정 (관리자)</h3>
+  <p class="note">Supabase의 <b>프로젝트 URL</b>과 <b>anon(public) 키</b>는 공개용이라 배포 파일에 들어가도 됩니다. 관리자 비밀번호는 여기 넣지 않고 로그인 화면에서만 씁니다. service_role 키는 절대 넣지 마세요.</p>
   <div class="field"><label for="svUrl">Supabase 프로젝트 URL</label><input type="text" id="svUrl" placeholder="https://xxxx.supabase.co" spellcheck="false"></div>
   <div class="field"><label for="svAnon">anon (public) 키</label><input type="text" id="svAnon" placeholder="eyJ..." spellcheck="false"></div>
-  <div class="field"><label for="svOp">운영자 키 (SETUP.md에서 정한 값)</label><input type="password" id="svOp" autocomplete="off"></div>
   <div class="field"><label for="svApp">이 앱의 공개 주소 (GitHub Pages) — 클라이언트 링크를 만들 때 사용</label><input type="text" id="svApp" placeholder="https://아이디.github.io/저장소/" spellcheck="false"><small>비워 두면 지금 열려 있는 주소를 씁니다. 파일(file://)로 연 상태에서는 꼭 채워 주세요.</small></div>
   <div class="status" id="svStatus"></div>
   <div class="foot"><button class="btn" id="svTest">연결 테스트</button><button class="btn" data-close>닫기</button><button class="btn primary" id="svSave">저장</button></div>
@@ -287,9 +317,11 @@ body.client header .title{pointer-events:none}
 
 <div class="modal" id="mProject"><div class="box">
   <h3>클라이언트 검수 만들기</h3>
-  <p class="note">지금 열어 둔 영상으로 서버에 프로젝트를 만들고, 클라이언트가 바로 검수할 수 있는 링크(또는 동봉용 HTML)를 만듭니다. 클라이언트는 설정 없이 영상만 열어 주석을 남기고, 남긴 내용은 서버에 자동 저장되어 운영자 화면에 보입니다.</p>
+  <p class="note">지금 열어 둔 영상으로 서버에 프로젝트를 만들고, 클라이언트용 링크와 아이디·비밀번호를 만듭니다. 클라이언트는 링크를 열어 로그인한 뒤 영상을 보며 포인트를 찍고, <b>빠른 수정 요청</b>을 누르면 관리자 화면에 들어옵니다.</p>
   <div class="field"><label for="pjTitle">프로젝트 이름</label><input type="text" id="pjTitle" placeholder="예: 홍보영상 1차 시안" spellcheck="false"></div>
   <div class="field"><label>대상 영상</label><div id="pjSource" style="font-size:13px"></div></div>
+  <div class="field"><label for="pjLogin">클라이언트 아이디</label><input type="text" id="pjLogin" placeholder="이 검수에서 쓸 아이디 (2자 이상)" spellcheck="false" autocomplete="off"></div>
+  <div class="field"><label for="pjPw">클라이언트 비밀번호</label><div class="inline"><input type="text" id="pjPw" spellcheck="false" autocomplete="off"><button class="btn small" id="pjGen" type="button">새로 만들기</button></div><small>링크를 연 사람은 이 아이디·비밀번호를 넣어야 검수 화면이 보여요. 이 프로젝트에서만 쓰입니다.</small></div>
   <label style="display:flex;align-items:center;gap:6px;margin-top:10px;font-size:13px"><input type="checkbox" id="pjUpload" checked> 지금 있는 메모도 함께 올리기 (<span id="pjCount">0</span>개)</label>
   <div class="status" id="pjStatus"></div>
   <div class="result" id="pjResult" hidden></div>
@@ -319,7 +351,7 @@ body.client header .title{pointer-events:none}
 </div></div>
 
 <div class="modal" id="mHelp"><div class="box">
-  <h3>전체 단축키</h3>
+  <h3>도움말 · 전체 단축키</h3>
   <div class="keys">
     <span class="sec">메모</span>
     <kbd>화면 클릭</kbd><span>그 자리에 핀 + 타임스탬프 메모 만들기 (영상이 멈춤)</span>
@@ -339,6 +371,9 @@ body.client header .title{pointer-events:none}
     <span class="sec">파일</span>
     <kbd>Ctrl+S</kbd><span>프로젝트 저장 (.json)</span>
     <kbd>드래그 앤 드롭</kbd><span>영상 파일 또는 프로젝트 파일(.json / 내보낸 .html) 열기</span>
+    <span class="sec">클라이언트 검수</span>
+    <kbd>서버 ▾ → 클라이언트 검수 만들기</kbd><span>영상을 연 뒤 아이디·비밀번호를 정하면 링크와 카톡용 안내 문구가 만들어집니다. 클라이언트가 '빠른 수정 요청'을 누르면 서버 프로젝트에 들어옵니다(8초마다 갱신)</span>
+    <span class="sec">기타</span>
     <kbd>유튜브 링크</kbd><span>링크로 영상 열기. 메모에는 캡처 대신 시간·핀 위치가 기록되고, 공유 보고서에서는 그 시점의 유튜브 영상이 바로 열립니다. 비율은 자동 감지(틀리면 YouTube 줄의 비율 표시 클릭)</span>
     <kbd>그리기</kbd><span>그리기 도구 선택 후 화면 드래그. 같은 메모에 여러 획을 추가하고 저장할 수 있습니다.</span>
     <kbd>핀 드래그</kbd><span>찍어 둔 포인트를 끌어서 위치를 옮깁니다 (좌표는 영상 그림 영역 기준 %)</span>
@@ -346,6 +381,40 @@ body.client header .title{pointer-events:none}
     <kbd>FPS</kbd><span>MP4/MOV는 파일 정보에서 자동 판별, 그 외는 재생 중 측정(≈). 유튜브는 원본 FPS를 알 수 없어 기본값으로 근사 이동</span>
   </div>
   <div class="foot"><button class="btn primary" data-close>닫기</button></div>
+</div></div>
+
+<div class="modal" id="mHelpClient"><div class="box help-client">
+  <h3>도움말 — 이렇게 검수해 주세요</h3>
+  <ol class="steps">
+    <li><b>이름 적기</b> — 위쪽 <b>검토자</b> 칸에 이름을 적어 주세요. 누가 남긴 요청인지 표시돼요.</li>
+    <li><b>영상 보기</b> — ▶ 버튼이나 <b>스페이스바</b>로 재생·정지해요. 영상 파일을 받으셨다면 그 파일을 화면에 끌어다 놓으세요.</li>
+    <li><b>고칠 곳 클릭</b> — 화면에서 고칠 곳을 클릭하면 영상이 멈추고 빨간 점이 찍혀요.</li>
+    <li><b>내용 적기</b> — 오른쪽 칸에 바로 적고 <b>Enter</b>. 자주 쓰는 문구 버튼을 눌러도 돼요.</li>
+    <li><b>보내기</b> — 다 하셨으면 오른쪽 위 <b>빠른 수정 요청</b>을 눌러 주세요. <u>누르기 전에는 전달되지 않아요.</u> 더 적고 다시 누르면 새로 쓴 것만 보내져요.</li>
+  </ol>
+  <p class="note">보내기가 안 될 때: <b>내보내기 → 메모 전체 복사</b>를 누른 뒤 카톡에 붙여 넣어 보내 주세요.</p>
+  <details><summary>조금 더 알아두면 좋은 것</summary>
+    · 화면에 선을 그리고 싶으면 아래 <b>그리기</b>를 누르고 드래그하세요.<br>
+    · 빨간 점은 끌어서 옮길 수 있고, 오른쪽 클릭하면 점만 지워져요.<br>
+    · 잘못 지웠으면 <b>Ctrl+Z</b>로 되돌려요. 메모를 고치려면 오른쪽 목록의 글을 클릭하세요.<br>
+    · 유튜브 영상: ← → 키로 한 장면(1프레임)씩, Shift를 같이 누르면 5초씩 움직여요.<br>
+    · 창을 닫아도 쓰던 메모는 이 PC에 남아요. 다시 링크를 열면 이어서 할 수 있어요.
+  </details>
+  <div class="foot"><button class="btn primary" data-close>알겠어요</button></div>
+</div></div>
+
+<div id="gate" hidden><div class="gate-box">
+  <img id="gateLogo" alt="HHSS">
+  <h2 id="gateTitle">로그인</h2>
+  <p id="gateNote"></p>
+  <form id="gateForm" autocomplete="on">
+    <label>아이디<input type="text" id="gateId" autocomplete="username" spellcheck="false" autocapitalize="off"></label>
+    <label>비밀번호<input type="password" id="gatePw" autocomplete="current-password"></label>
+    <label class="keep" id="gateKeepRow"><input type="checkbox" id="gateKeep" checked> 이 기기에서 로그인 유지</label>
+    <button class="btn primary" id="gateGo" type="submit">로그인</button>
+  </form>
+  <div class="gate-msg" id="gateMsg" role="alert"></div>
+  <div class="gate-extra" id="gateExtra"></div>
 </div></div>
 
 <div id="toast"></div>
@@ -1184,36 +1253,72 @@ async function doExport(kind){
   }
 }
 
-/* ---------- 서버 동기화 (Supabase PostgREST) ----------
-   - 공개 anon 키 + 요청 헤더(x-review-token / x-operator-key)로 RLS가 접근을 판정한다 (supabase/schema.sql 참고).
-   - 운영자 키·service_role 키는 어떤 파일에도 넣지 않는다. 운영자 키는 이 브라우저의 localStorage에만 있다.
-   - 메모는 개별 행으로 upsert(id 기준)하고, 삭제는 deleted_at을 채우는 soft delete. 충돌은 rev(수정 번호)가 큰 쪽이 이긴다.
-   - 상태: saved(서버 저장됨) / saving / dirty(곧 전송) / offline(브라우저 임시 저장) / error(실패·재시도) — localStorage 성공을 서버 저장으로 표시하지 않는다. */
+/* ---------- 서버 동기화 (Supabase) ----------
+   - 관리자: Supabase Auth(아이디=이메일, 비밀번호)로 로그인 → 사용자 JWT로 요청. operators 표에 등록된 계정만 관리 권한(RLS).
+   - 클라이언트: 프로젝트마다 관리자가 정한 아이디·비밀번호 → rpc/client_login이 그 프로젝트 전용 토큰을 돌려줌 → x-review-token 헤더.
+     클라이언트가 찍은 메모는 '빠른 수정 요청'을 눌러야 서버로 간다(그 전엔 이 브라우저에만 저장).
+   - 브라우저·HTML에 들어가는 값은 공개용(프로젝트 URL, anon 키)뿐. 비밀번호는 서버에 해시로만 저장. service_role 키는 어디에도 넣지 않는다.
+   - 메모는 행 단위 upsert(id 기준), 삭제는 deleted_at(soft delete), 충돌은 rev(수정 번호)가 큰 쪽이 이긴다. */
 const SERVER_DEFAULT={url:'',anonKey:''}; /* 배포 전에 운영자가 채움 (공개용 값만) */
 const PRISTINE='<!doctype html>\n'+document.documentElement.outerHTML; /* 클라이언트용 HTML 생성에 쓰는 원본 */
-S.server=Object.assign({url:'',anonKey:'',operatorKey:'',appUrl:''},SERVER_DEFAULT);
-try{const saved=JSON.parse(localStorage.getItem('hhss:server')||'null');if(saved)Object.assign(S.server,saved);}catch{}
+S.server=Object.assign({url:'',anonKey:'',appUrl:''},SERVER_DEFAULT);
+try{const saved=JSON.parse(localStorage.getItem('hhss:server')||'null');if(saved){delete saved.operatorKey;for(const k of ['url','anonKey','appUrl'])if(saved[k])S.server[k]=saved[k];}}catch{}
 S.author=(()=>{try{return localStorage.getItem('hhss:author')||'';}catch{return '';}})();
 const CLIENT=(()=>{
-  try{const el=document.getElementById('hhss-client-config');if(el){const c=JSON.parse(el.textContent);if(c&&c.projectId&&c.token)return c;}}catch{}
-  const m=location.hash.match(/[#&]r=([0-9a-fA-F-]{36})\.([A-Za-z0-9_-]{20,})/);
-  return m?{projectId:m[1],token:m[2]}:null;
+  try{const el=document.getElementById('hhss-client-config');if(el){const c=JSON.parse(el.textContent);if(c&&c.projectId)return c;}}catch{}
+  const m=location.hash.match(/[#&]p=([0-9a-fA-F-]{36})/);
+  return m?{projectId:m[1]}:null;
 })();
 const randToken=n=>{const a=new Uint8Array(n);crypto.getRandomValues(a);return Array.from(a,b=>'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'[b%62]).join('');};
+const randPassword=()=>{const cs='abcdefghjkmnpqrstuvwxyz23456789',a=new Uint8Array(8);crypto.getRandomValues(a);return Array.from(a,b=>cs[b%cs.length]).join('');};
+const LOGIN_RE=/^[A-Za-z0-9가-힣._-]{2,40}$/;
+
+/* --- 관리자 로그인 (Supabase Auth, 별도 라이브러리 없이 REST) --- */
+const Auth={
+  sess:null,key:'hhss:auth',
+  base(){const url=String(S.server.url||'').trim().replace(/\/+$/,''),key=String(S.server.anonKey||'').trim();return(/^https:\/\/[^\s/]+$/.test(url)&&key)?{url,key}:null;},
+  load(){try{this.sess=JSON.parse(localStorage.getItem(this.key)||sessionStorage.getItem(this.key)||'null');}catch{this.sess=null;}},
+  kept(){try{return !!localStorage.getItem(this.key);}catch{return false;}},
+  save(keep){const v=JSON.stringify(this.sess);try{localStorage.removeItem(this.key);sessionStorage.removeItem(this.key);(keep?localStorage:sessionStorage).setItem(this.key,v);}catch{}},
+  clear(){this.sess=null;try{localStorage.removeItem(this.key);sessionStorage.removeItem(this.key);}catch{}},
+  async call(grant,body){
+    const b=this.base();if(!b)throw Object.assign(new Error('서버 설정이 없어요'),{status:0});
+    let r;try{r=await fetch(b.url+'/auth/v1/token?grant_type='+grant,{method:'POST',headers:{apikey:b.key,'Content-Type':'application/json'},body:JSON.stringify(body)});}
+    catch{throw Object.assign(new Error('서버에 닿지 못했어요'),{status:0});}
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok)throw Object.assign(new Error(d.error_description||d.msg||d.message||('HTTP '+r.status)),{status:r.status,code:d.error_code||d.error||''});
+    return{access_token:d.access_token,refresh_token:d.refresh_token,expires_at:d.expires_at||Math.floor(Date.now()/1000)+(d.expires_in||3600),email:(d.user&&d.user.email)||''};
+  },
+  /* 아이디에 @가 없으면 아이디@hhss.studio 로 로그인 (Supabase 사용자 이메일을 그렇게 만들어 둠, SETUP.md) */
+  email(id){id=String(id||'').trim();return id.includes('@')?id:id+'@hhss.studio';},
+  async signIn(id,pw,keep){this.sess=await this.call('password',{email:this.email(id),password:pw});this.save(keep);return this.sess;},
+  async token(){
+    if(!this.sess)return null;
+    if(Date.now()/1000<this.sess.expires_at-60)return this.sess.access_token;
+    try{const keep=this.kept();this.sess=await this.call('refresh_token',{refresh_token:this.sess.refresh_token});this.save(keep);return this.sess.access_token;}
+    catch(e){if(e.status){this.clear();updateWho();if(!CLIENT)showAdminGate('로그인 시간이 지났어요. 다시 로그인해 주세요.');}return null;}
+  },
+  async signOut(){const b=this.base(),t=this.sess&&this.sess.access_token;this.clear();if(b&&t)fetch(b.url+'/auth/v1/logout',{method:'POST',headers:{apikey:b.key,Authorization:'Bearer '+t}}).catch(()=>{});}
+};
+function anonHeaders(b){return{apikey:b.key,Authorization:'Bearer '+b.key,'Content-Type':'application/json'};}
+function opCfg(){const b=Auth.base();return b?{url:b.url,headers:anonHeaders(b),role:'operator'}:null;}
+function clientCfg(token){const b=Auth.base();if(!b)return null;const h=anonHeaders(b);if(token)h['x-review-token']=token;return{url:b.url,headers:h,role:'client'};}
+
 const Sync={
-  cfg:null,pending:new Map(),timer:0,flushing:false,pulling:false,status:'idle',lastError:'',lastSaved:0,pollTimer:0,retryDelay:0,titleTimer:0,
+  cfg:null,pending:new Map(),timer:0,flushing:false,pulling:false,status:'idle',lastError:'',lastSaved:0,pollTimer:0,retryDelay:0,titleTimer:0,manual:false,authLost:false,
   enabled(){return !!(this.cfg&&S.remote&&S.remote.projectId);},
   configure(role,token){
-    const url=String(S.server.url||'').trim().replace(/\/+$/,''),key=String(S.server.anonKey||'').trim();
-    if(!/^https:\/\/[^\s/]+$/.test(url)||!key){this.cfg=null;return false;}
-    const h={apikey:key,Authorization:'Bearer '+key,'Content-Type':'application/json'};
-    if(role==='operator'){if(!S.server.operatorKey){this.cfg=null;return false;}h['x-operator-key']=S.server.operatorKey;}
-    else h['x-review-token']=token;
-    this.cfg={url,headers:h,role};return true;
+    if(role==='operator'){if(!Auth.sess){this.cfg=null;return false;}this.cfg=opCfg();}
+    else this.cfg=clientCfg(token);
+    this.manual=role==='client'; /* 클라이언트: 버튼을 눌러야 전송 */
+    return !!this.cfg;
   },
   async rest(method,path,body,prefer,cfg){
     const c=cfg||this.cfg;if(!c)throw Object.assign(new Error('서버 설정이 없어요'),{status:0});
-    const r=await fetch(c.url+'/rest/v1/'+path,{method,headers:Object.assign({},c.headers,prefer?{Prefer:prefer}:{}),body:body==null?undefined:JSON.stringify(body)});
+    const h=Object.assign({},c.headers,prefer?{Prefer:prefer}:{});
+    if(c.role==='operator'){const t=await Auth.token();if(!t)throw Object.assign(new Error('관리자 로그인이 필요해요'),{status:401});h.Authorization='Bearer '+t;}
+    let r;try{r=await fetch(c.url+'/rest/v1/'+path,{method,headers:h,body:body==null?undefined:JSON.stringify(body)});}
+    catch{throw Object.assign(new Error('서버에 닿지 못했어요'),{status:0});}
     if(!r.ok){const t=await r.text().catch(()=>'');throw Object.assign(new Error(`HTTP ${r.status} ${t.slice(0,160)}`),{status:r.status});}
     if(r.status===204)return null;const txt=await r.text();return txt?JSON.parse(txt):null;
   },
@@ -1226,25 +1331,29 @@ const Sync={
   enqueue(m){
     if(!this.enabled()||!m)return;
     this.pending.set(m.id,m);this.persistPending();
-    clearTimeout(this.timer);this.timer=setTimeout(()=>this.flush(),700);
+    if(!this.manual){clearTimeout(this.timer);this.timer=setTimeout(()=>this.flush(),700);}
     this.setStatus('dirty');
   },
+  /* 성공하면 true. 관리자는 실패 시 자동 재시도, 클라이언트는 다시 누르게 한다 */
   async flush(){
-    if(!this.enabled()||this.flushing)return;
-    if(!this.pending.size){this.setStatus(navigator.onLine?'saved':'offline');return;}
+    if(!this.enabled())return false;
+    if(this.flushing)return false;
+    if(!this.pending.size){this.setStatus(navigator.onLine?'saved':'offline');return true;}
     this.flushing=true;this.setStatus('saving');
     const ids=[...this.pending.keys()],rows=ids.map(id=>this.rowOf(this.pending.get(id)));
     try{
       await this.rest('POST','annotations?on_conflict=id',rows,'resolution=merge-duplicates,return=minimal');
       ids.forEach(id=>{if(this.pending.get(id)&&this.rowOf(this.pending.get(id)).updated_at===rows.find(r=>r.id===id).updated_at)this.pending.delete(id);});
-      this.persistPending();this.retryDelay=0;this.lastSaved=Date.now();
+      this.persistPending();this.retryDelay=0;this.lastSaved=Date.now();this.authLost=false;
       this.setStatus(this.pending.size?'dirty':'saved');
-      if(this.pending.size){clearTimeout(this.timer);this.timer=setTimeout(()=>this.flush(),300);}
+      if(this.pending.size&&!this.manual){clearTimeout(this.timer);this.timer=setTimeout(()=>this.flush(),300);}
+      return true;
     }catch(e){
       this.lastError=e.message;
+      if(this.manual&&(e.status===401||e.status===403))this.authLost=true;
       this.setStatus(!navigator.onLine||!e.status?'offline':'error');
-      this.retryDelay=Math.min(60000,(this.retryDelay||2000)*2);
-      clearTimeout(this.timer);this.timer=setTimeout(()=>this.flush(),this.retryDelay);
+      if(!this.manual){this.retryDelay=Math.min(60000,(this.retryDelay||2000)*2);clearTimeout(this.timer);this.timer=setTimeout(()=>this.flush(),this.retryDelay);}
+      return false;
     }finally{this.flushing=false;}
   },
   async pull(){
@@ -1254,7 +1363,7 @@ const Sync={
       const rows=await this.rest('GET',`annotations?project_id=eq.${encodeURIComponent(S.remote.projectId)}&select=*,comments(*)&order=t.asc`);
       this.merge(rows||[]);this.lastPull=Date.now();
       if(this.status==='offline'||this.status==='error'||this.status==='idle')this.setStatus(this.pending.size?'dirty':'saved');
-      if(this.pending.size)this.flush();
+      if(this.pending.size&&!this.manual)this.flush();
     }catch(e){this.lastError=e.message;if(this.status==='saved'||this.status==='idle')this.setStatus(!navigator.onLine||!e.status?'offline':'error');}
     finally{this.pulling=false;}
   },
@@ -1270,7 +1379,7 @@ const Sync={
       else if(!editing&&((inc.rev||0)>(local.rev||0)||((inc.rev||0)===(local.rev||0)&&String(inc.updated||'')>String(local.updated||'')))){Object.assign(local,inc);dirty=true;}
       else if(JSON.stringify(local.comments||[])!==JSON.stringify(inc.comments||[])){local.comments=inc.comments;dirty=true;}
     }
-    /* 서버에 아직 없는 로컬 메모(연결 전에 만든 것) → 올린다 */
+    /* 서버에 아직 없는 로컬 메모(연결 전에 만든 것) → 보낼 목록에 넣는다 */
     for(const m of S.memos)if(!seen.has(m.id)&&!this.pending.has(m.id))this.enqueue(m);
     if(dirty){sortMemos();render();scheduleAutosave();}
   },
@@ -1282,20 +1391,101 @@ const Sync={
   startPolling(ms){this.stopPolling();this.pollTimer=setInterval(()=>{if(document.visibilityState==='visible')this.pull();},ms||8000);},
   stopPolling(){clearInterval(this.pollTimer);this.pollTimer=0;},
   titleChanged(){if(!this.enabled()||this.cfg.role!=='operator')return;clearTimeout(this.titleTimer);this.titleTimer=setTimeout(()=>this.rest('PATCH',`projects?id=eq.${S.remote.projectId}`,{title:S.title,updated_at:new Date().toISOString()},'return=minimal').catch(()=>{}),800);},
-  disconnect(){this.stopPolling();clearTimeout(this.timer);this.pending.clear();this.cfg=null;S.remote=null;this.setStatus('idle');}
+  disconnect(){this.stopPolling();clearTimeout(this.timer);this.pending.clear();this.cfg=null;S.remote=null;this.manual=false;this.setStatus('idle');}
 };
 function renderSync(){
-  const el=$('#syncChip');
-  if(!S.remote||!Sync.cfg){el.hidden=!CLIENT;el.className='sync';el.textContent='서버 미연결';el.title='';return;}
-  el.hidden=false;const st=Sync.status;el.className='sync '+st;el.title='';
+  const el=$('#syncChip'),send=$('#btnSend');
   const n=Sync.pending.size,when=Sync.lastSaved?new Date(Sync.lastSaved).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}):'';
-  el.textContent=st==='saved'?'서버 저장됨 ✓'+(when?' '+when:''):st==='saving'?'서버에 저장 중…':st==='dirty'?`변경 ${n}건 곧 전송`:st==='offline'?`오프라인 · ${n}건 브라우저에 임시 저장`:st==='error'?`서버 저장 실패 · ${n}건 대기 (눌러서 재시도)`:'연결 준비 중…';
+  if(send)send.textContent='빠른 수정 요청'+(n?` (${n})`:'');
+  if(!S.remote||!Sync.cfg){el.hidden=!CLIENT;el.className='sync';el.textContent=CLIENT?'로그인 전':'서버 미연결';el.title='';return;}
+  el.hidden=false;const st=Sync.status;el.className='sync '+st;el.title='';
+  if(Sync.manual)el.textContent=st==='saved'?(when?`모두 보냄 ✓ ${when}`:'보낼 수정 요청 없음'):st==='saving'?'보내는 중…':st==='dirty'?`보내지 않은 수정 ${n}건`:st==='offline'?`인터넷 끊김 · ${n}건 이 PC에 보관`:st==='error'?`보내기 실패 · ${n}건 (다시 눌러 주세요)`:'준비 중…';
+  else el.textContent=st==='saved'?'서버 저장됨 ✓'+(when?' '+when:''):st==='saving'?'서버에 저장 중…':st==='dirty'?`변경 ${n}건 곧 전송`:st==='offline'?`오프라인 · ${n}건 브라우저에 임시 저장`:st==='error'?`서버 저장 실패 · ${n}건 대기 (눌러서 재시도)`:'연결 준비 중…';
   if(st==='error'||st==='offline')el.title=Sync.lastError||'';
 }
-$('#syncChip').addEventListener('click',()=>{if(Sync.enabled()){Sync.retryDelay=0;Sync.flush();Sync.pull();}});
-window.addEventListener('online',()=>{if(Sync.enabled()){Sync.retryDelay=0;Sync.flush();Sync.pull();}});
+$('#syncChip').addEventListener('click',()=>{if(!Sync.enabled())return;if(Sync.manual){sendRequests();return;}Sync.retryDelay=0;Sync.flush();Sync.pull();});
+window.addEventListener('online',()=>{if(Sync.enabled()){Sync.retryDelay=0;if(!Sync.manual)Sync.flush();Sync.pull();}});
 document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&Sync.enabled())Sync.pull();});
-window.addEventListener('beforeunload',e=>{if(Sync.enabled()&&Sync.pending.size){e.preventDefault();e.returnValue='아직 서버에 보내지 못한 메모가 있어요.';}});
+window.addEventListener('beforeunload',e=>{if(Sync.enabled()&&Sync.pending.size){e.preventDefault();e.returnValue=Sync.manual?"아직 보내지 않은 수정 요청이 있어요. '빠른 수정 요청'을 눌러 주세요.":'아직 서버에 보내지 못한 메모가 있어요.';}});
+
+/* --- 로그인 화면 (관리자·클라이언트 공용) --- */
+let gateMode='';
+function gateMsg(t){$('#gateMsg').textContent=t||'';}
+function hideGate(){$('#gate').hidden=true;document.body.classList.remove('gated');}
+function showGateBase(){$('#gateLogo').src=LOGO;$('#gate').hidden=false;document.body.classList.add('gated');closeModals();$('#gatePw').value='';setTimeout(()=>($('#gateId').value?$('#gatePw'):$('#gateId')).focus(),30);}
+function showAdminGate(msg){
+  gateMode='admin';
+  $('#gateTitle').textContent='관리자 로그인';
+  $('#gateNote').textContent='HHSS 영상 검수 관리자 화면입니다.';
+  $('#gateKeepRow').hidden=false;
+  const has=!!Auth.base();
+  $('#gateExtra').innerHTML=has?`<button type="button" data-g="server">서버 설정</button>`
+    :`서버(Supabase)가 아직 연결되지 않았어요.<br><button type="button" data-g="server">서버 설정</button> · <button type="button" data-g="local">서버 없이 이 PC에서만 쓰기</button>`;
+  $('#gateForm').hidden=!has;
+  gateMsg(msg);showGateBase();
+}
+function showClientGate(msg){
+  gateMode='client';
+  $('#gateTitle').textContent='영상 검수 로그인';
+  $('#gateNote').textContent='관리자에게 받은 아이디와 비밀번호를 넣어 주세요.';
+  $('#gateKeepRow').hidden=true;$('#gateExtra').innerHTML='';$('#gateForm').hidden=false;
+  gateMsg(msg);showGateBase();
+}
+$('#gateExtra').addEventListener('click',e=>{
+  const b=e.target.closest('[data-g]');if(!b)return;
+  if(b.dataset.g==='server')openServerSettings();
+  else if(b.dataset.g==='local'){try{localStorage.setItem('hhss:localOnly','1');}catch{}enterAdmin();toast('서버 없이 이 PC에서만 씁니다. 클라이언트 검수는 서버를 연결한 뒤에 만들 수 있어요.',4500);}
+});
+$('#gateForm').addEventListener('submit',async e=>{
+  e.preventDefault();
+  const id=$('#gateId').value.trim(),pw=$('#gatePw').value;
+  if(!id||!pw){gateMsg('아이디와 비밀번호를 모두 넣어 주세요.');return;}
+  const go=$('#gateGo');go.disabled=true;gateMsg('확인 중…');
+  try{
+    if(gateMode==='admin'){
+      await Auth.signIn(id,pw,$('#gateKeep').checked);
+      const isOp=await Sync.rest('POST','rpc/is_operator',{},null,opCfg());
+      if(isOp!==true){await Auth.signOut();gateMsg('로그인은 됐지만 관리자로 등록된 계정이 아니에요. (SETUP.md의 관리자 등록 SQL 확인)');return;}
+      enterAdmin();toast('관리자로 로그인했어요');
+    }else{
+      const tok=await Sync.rest('POST','rpc/client_login',{pid:CLIENT.projectId,login:id,password:pw},null,clientCfg(null));
+      if(!tok){gateMsg('아이디 또는 비밀번호가 맞지 않아요. (검수가 마감됐을 수도 있어요 — 관리자에게 문의해 주세요)');return;}
+      const p=await Sync.rest('POST','rpc/client_project',{pid:CLIENT.projectId},null,clientCfg(tok));
+      if(!p){gateMsg('이 검수 프로젝트를 열 수 없어요. 관리자에게 문의해 주세요.');return;}
+      ClientCache.set({token:tok,project:p,login:id});hideGate();
+      if(S.remote&&S.remote.role==='client'&&S.remote.projectId===p.id){ /* 로그인 정보가 바뀌어 다시 로그인한 경우: 화면은 그대로 두고 토큰만 교체 */
+        S.remote.token=tok;Sync.configure('client',tok);Sync.authLost=false;renderSync();toast('다시 로그인했어요. 빠른 수정 요청을 다시 눌러 주세요.',4000);
+      }else await startClientProject(p,tok);
+    }
+  }catch(err){
+    gateMsg(err.status===400||err.status===401?(gateMode==='admin'?'아이디 또는 비밀번호가 맞지 않아요.':'아이디 또는 비밀번호가 맞지 않아요.')
+      :!err.status?'서버에 닿지 못했어요. 인터넷 연결을 확인해 주세요.'
+      :err.status===404?'서버 준비가 덜 됐어요 (schema.sql 미실행). 관리자에게 알려 주세요.':'로그인 실패: '+err.message);
+  }finally{go.disabled=false;}
+});
+
+/* --- 관리자 시작 --- */
+function updateWho(){
+  const b=$('#btnLogout');if(!b)return;
+  b.firstChild.textContent=Auth.sess?'로그아웃':'관리자 로그인';
+  $('#logoutWho').textContent=Auth.sess?(Auth.sess.email||''):'서버 기능(클라이언트 검수)을 쓰려면 로그인';
+}
+function enterAdmin(){hideGate();updateWho();renderSync();}
+async function bootAdmin(){
+  Auth.load();updateWho();
+  if(!Auth.base()){let local=false;try{local=!!localStorage.getItem('hhss:localOnly');}catch{}if(local){enterAdmin();return;}showAdminGate();return;}
+  if(Auth.sess){
+    const t=await Auth.token();
+    if(t){enterAdmin();return;}
+    if(Auth.sess){enterAdmin();toast('서버에 닿지 못해 로그인을 확인하지 못했어요. 인터넷이 연결되면 서버 기능을 쓸 수 있어요.',5000);return;} /* 오프라인 */
+  }
+  showAdminGate();
+}
+function needAdmin(what){
+  if(!Auth.base()){toast('먼저 서버 설정을 채워 주세요');openServerSettings();return false;}
+  if(!Auth.sess){showAdminGate(what+' 로그인해 주세요.');return false;}
+  return true;
+}
 
 /* --- 서버 프로젝트 연결 (공통) --- */
 async function attachRemote(project,role,token){
@@ -1310,33 +1500,33 @@ async function attachRemote(project,role,token){
   Sync.startPolling(role==='client'?15000:8000);
   renderSync();return true;
 }
-function clientLink(project,token){
-  let base=(S.server.appUrl||'').trim();
-  if(!base&&/^https?:$/.test(location.protocol))base=location.origin+location.pathname;
-  if(!base)return '';
-  return base+'#r='+project.id+'.'+token;
+function appBase(){let base=(S.server.appUrl||'').trim();if(!base&&/^https?:$/.test(location.protocol))base=location.origin+location.pathname;return base;}
+function clientLink(project){const base=appBase();return base?base+'#p='+project.id:'';}
+function guideText(project,login,pw){
+  const link=clientLink(project),isFile=project.source_kind==='file';
+  return `[HHSS 영상 검수] ${project.title||''}\n아래 링크를 크롬(또는 엣지)에서 열고 로그인해 주세요.\n${link||'(링크: 서버 설정의 공개 주소를 채운 뒤 다시 복사)'}\n아이디: ${login}\n비밀번호: ${pw||'(처음 알려 드린 비밀번호)'}\n`+
+    (isFile?`함께 보내 드린 영상 파일(${project.file_name||''})을 화면에 끌어다 놓으면 시작돼요.\n`:'')+
+    `보시다가 고칠 곳을 화면에서 클릭해 적어 주시고, 다 하셨으면 오른쪽 위 '빠른 수정 요청'을 눌러 주세요. 사용법은 '도움말' 버튼에 있어요.`;
 }
-function clientHtml(project,token){
-  const cfg={projectId:project.id,token,title:project.title,source:{kind:project.source_kind,youtubeId:project.youtube_id||'',fileName:project.file_name||'',fileSize:+project.file_size||0,aspect:project.aspect||'16:9'},server:{url:S.server.url,anonKey:S.server.anonKey},generatedAt:new Date().toISOString()};
+/* 동봉용 HTML: 프로젝트 id와 공개 서버 값만 넣는다. 토큰·비밀번호는 넣지 않으므로 열면 로그인 화면이 먼저 나온다 */
+function clientHtml(project){
+  const cfg={projectId:project.id,title:project.title,server:{url:S.server.url,anonKey:S.server.anonKey},generatedAt:new Date().toISOString()};
   const tag=`<script id="hhss-client-config" type="application/json">${JSON.stringify(cfg).replace(/</g,'\\u003c')}<\/script>`;
-  let html=PRISTINE.replace(/<script id="hhss-client-config" type="application\/json">[^<]*<\/script>\s*/,''); /* 이미 클라이언트 파일이면 기존 설정 제거 */
+  let html=PRISTINE.replace(/<script id="hhss-client-config" type="application\/json">[^<]*<\/script>\s*/,'');
   html=html.replace('</head>',tag+'\n</head>');
   return html.replace(/<title>[^<]*<\/title>/,`<title>${esc(project.title||'검수')} · 검수</title>`);
 }
 
-/* --- 운영자: 서버 설정 --- */
-function openServerSettings(){$('#svUrl').value=S.server.url||'';$('#svAnon').value=S.server.anonKey||'';$('#svOp').value=S.server.operatorKey||'';$('#svApp').value=S.server.appUrl||'';$('#svStatus').textContent='';$('#svStatus').className='status';openModal('mServer');}
-function readServerForm(){return{url:$('#svUrl').value.trim().replace(/\/+$/,''),anonKey:$('#svAnon').value.trim(),operatorKey:$('#svOp').value.trim(),appUrl:$('#svApp').value.trim()};}
+/* --- 관리자: 서버 설정 --- */
+function openServerSettings(){$('#svUrl').value=S.server.url||'';$('#svAnon').value=S.server.anonKey||'';$('#svApp').value=S.server.appUrl||'';$('#svStatus').textContent='';$('#svStatus').className='status';openModal('mServer');}
+function readServerForm(){return{url:$('#svUrl').value.trim().replace(/\/+$/,''),anonKey:$('#svAnon').value.trim(),appUrl:$('#svApp').value.trim()};}
 async function testServer(cfgIn){
   const st=$('#svStatus');st.className='status';st.textContent='확인 중…';
   const c=cfgIn||readServerForm();
   if(!/^https:\/\/[^\s/]+$/.test(c.url)){st.className='status bad';st.textContent='URL 형식이 이상해요. 예: https://xxxx.supabase.co';return false;}
-  const base={url:c.url,headers:{apikey:c.anonKey,Authorization:'Bearer '+c.anonKey,'Content-Type':'application/json','x-operator-key':c.operatorKey}};
   try{
-    const isOp=await Sync.rest('POST','rpc/is_operator',{},null,base);
-    if(isOp!==true){st.className='status bad';st.textContent='서버에는 연결됐지만 운영자 키가 맞지 않아요. SETUP.md의 운영자 키 설정 SQL을 확인해 주세요.';return false;}
-    const rows=await Sync.rest('GET','projects?select=id&limit=1000',null,null,base);
-    st.className='status ok';st.textContent=`연결 확인 ✓ 운영자 권한 OK · 프로젝트 ${rows.length}개`;return true;
+    await Sync.rest('POST','rpc/is_operator',{},null,{url:c.url,headers:anonHeaders({key:c.anonKey})});
+    st.className='status ok';st.textContent='연결 확인 ✓ 서버와 테이블이 준비됐어요. 저장한 뒤 관리자 계정으로 로그인하세요.';return true;
   }catch(e){
     st.className='status bad';
     st.textContent=e.status===401?'anon 키가 틀렸거나 URL이 다른 프로젝트예요 (401).':e.status===404?'rpc/is_operator 함수가 없어요. supabase/schema.sql을 먼저 실행해 주세요 (404).':!e.status?'서버에 닿지 못했어요. 인터넷·URL을 확인해 주세요.':'연결 실패: '+e.message;
@@ -1345,72 +1535,93 @@ async function testServer(cfgIn){
 }
 $('#svTest').addEventListener('click',()=>testServer());
 $('#svSave').addEventListener('click',()=>{
+  const prevUrl=S.server.url;
   Object.assign(S.server,readServerForm());
   try{localStorage.setItem('hhss:server',JSON.stringify(S.server));}catch{}
-  if(S.remote&&S.remote.role==='operator')Sync.configure('operator');
+  if(prevUrl&&prevUrl!==S.server.url){Auth.clear();updateWho();}
   closeModals();toast('서버 설정 저장됨 (이 브라우저에만)');renderSync();
+  if(!CLIENT&&(!$('#gate').hidden||(!Auth.sess&&Auth.base())))showAdminGate();
 });
 
-/* --- 운영자: 클라이언트 검수 만들기 --- */
+/* --- 관리자: 클라이언트 검수 만들기 --- */
 function openNewProject(){
   if(!S.mode){toast('먼저 영상(파일 또는 유튜브 링크)을 열어 주세요');return;}
-  if(!Sync.configure('operator')){toast('먼저 서버 설정을 채워 주세요');openServerSettings();return;}
+  if(!needAdmin('클라이언트 검수를 만들려면'))return;
   $('#pjTitle').value=S.title||base(S.videoName)||'';
   $('#pjSource').innerHTML=S.mode==='yt'?`유튜브 · ${esc(S.ytTitle||S.ytId)} <small style="color:var(--muted)">(https://youtu.be/${esc(S.ytId)})</small>`:`영상 파일 · <b>${esc(S.videoName)}</b> <small style="color:var(--muted)">${(S.videoSize/1048576).toFixed(1)} MB — 클라이언트에게 이 파일도 함께 보내야 해요</small>`;
+  $('#pjLogin').value='';$('#pjPw').value=randPassword();
   $('#pjCount').textContent=S.memos.length;$('#pjUpload').checked=S.memos.length>0;
   $('#pjStatus').textContent='';$('#pjStatus').className='status';$('#pjResult').hidden=true;$('#pjResult').innerHTML='';$('#pjCreate').disabled=false;
-  openModal('mProject');
+  openModal('mProject');setTimeout(()=>$('#pjLogin').focus(),50);
 }
+$('#pjGen').addEventListener('click',()=>{$('#pjPw').value=randPassword();});
 async function createProject(){
   const st=$('#pjStatus');st.className='status';
-  const title=$('#pjTitle').value.trim();if(!title){st.className='status bad';st.textContent='프로젝트 이름을 넣어 주세요';return;}
+  const title=$('#pjTitle').value.trim(),login=$('#pjLogin').value.trim(),pw=$('#pjPw').value.trim();
+  if(!title){st.className='status bad';st.textContent='프로젝트 이름을 넣어 주세요';return;}
+  if(!LOGIN_RE.test(login)){st.className='status bad';st.textContent='클라이언트 아이디는 2~40자의 한글·영문·숫자(. _ - 가능)로 정해 주세요';$('#pjLogin').focus();return;}
+  if(pw.length<4){st.className='status bad';st.textContent='비밀번호는 4자 이상으로 정해 주세요 (자동 만들기 권장)';return;}
   $('#pjCreate').disabled=true;st.textContent='서버에 만드는 중…';
-  const token=randToken(40),id=crypto.randomUUID();
-  const project={id,title,source_kind:S.mode==='yt'?'youtube':'file',youtube_id:S.mode==='yt'?S.ytId:null,file_name:S.mode==='file'?S.videoName:null,file_size:S.mode==='file'?S.videoSize:null,aspect:S.mode==='yt'?ytAspect():(video.videoWidth?`${video.videoWidth}:${video.videoHeight}`:null),fps:effectiveFps(),review_token:token};
+  const id=crypto.randomUUID();
+  const project={id,title,source_kind:S.mode==='yt'?'youtube':'file',youtube_id:S.mode==='yt'?S.ytId:null,file_name:S.mode==='file'?S.videoName:null,file_size:S.mode==='file'?S.videoSize:null,aspect:S.mode==='yt'?ytAspect():(video.videoWidth?`${video.videoWidth}:${video.videoHeight}`:null),fps:effectiveFps(),review_token:randToken(40)};
   try{
-    await Sync.rest('POST','projects',project,'return=minimal');
+    await Sync.rest('POST','projects',project,'return=minimal',opCfg());
+    await Sync.rest('POST','rpc/set_client_credentials',{pid:id,login,password:pw},null,opCfg());
+    project.client_login=login;
     S.title=title;titleEl.value=title;
     const upload=$('#pjUpload').checked;
     if(!upload){autosave();S.memos=[];S.selectedId=null;S.undo=[];if(S.editing){S.editing=null;compose.classList.remove('open');}}
     await attachRemote(project,'operator',null);
     if(upload)S.memos.forEach(m=>Sync.enqueue(m));
-    showProjectResult(project,token,'만들어졌어요. 아래 링크나 파일을 클라이언트에게 전달하세요.');
-  }catch(e){$('#pjCreate').disabled=false;st.className='status bad';st.textContent=e.status===401?'anon 키 또는 URL이 맞지 않아요 (401)':e.status===403||e.status===404?'운영자 키가 맞지 않거나 schema.sql이 실행되지 않았어요 ('+e.status+')':'실패: '+e.message;}
+    showProjectResult(project,login,pw,'만들어졌어요. 아래 안내 문구를 복사해 클라이언트에게 보내세요.');
+  }catch(e){$('#pjCreate').disabled=false;st.className='status bad';st.textContent=e.status===401||e.status===403?'관리자 권한이 없어요. 다시 로그인해 보세요 ('+e.status+')':e.status===404?'schema.sql이 실행되지 않았어요 (404)':'실패: '+e.message;}
 }
-function showProjectResult(project,token,msg){
-  const link=clientLink(project,token),isFile=project.source_kind==='file';
+function showProjectResult(project,login,pw,msg){
+  const link=clientLink(project),isFile=project.source_kind==='file',guide=guideText(project,login,pw);
   const box=$('#pjResult');box.hidden=false;$('#pjStatus').className='status ok';$('#pjStatus').textContent=msg||'';
-  box.innerHTML=`${link?`<div><b>클라이언트 링크</b> ${isFile?'(열면 영상 파일을 한 번 고르라고 안내해요)':'(크롬에서 바로 열림)'}<input type="text" readonly value="${esc(link)}" id="pjLink"><button class="btn small" id="pjCopy">링크 복사</button></div>`:`<div style="color:#8a5a00"><b>링크를 만들 수 없어요.</b> 서버 설정에서 '이 앱의 공개 주소'를 채우거나, 아래 HTML 파일로 전달하세요.</div>`}
-    <div style="margin-top:8px"><b>동봉용 HTML</b> — 웹 주소 없이도 열리는 파일. ${isFile?'영상 파일과 함께 카톡·메일로 보내세요.':'유튜브 영상은 파일로 열면 재생이 제한되니 링크를 권장해요.'}<br><button class="btn small" id="pjHtml">클라이언트 HTML 내려받기</button></div>
-    <small style="color:var(--muted);display:block;margin-top:8px">링크·HTML 안의 토큰은 이 프로젝트에만 쓸 수 있는 접근 키예요. 운영자 키는 들어 있지 않습니다.</small>`;
-  const copyBtn=$('#pjCopy');if(copyBtn)copyBtn.addEventListener('click',async()=>{toast(await copyText(link)?'링크를 복사했어요':'복사 실패 — 직접 선택해 복사하세요');});
-  $('#pjHtml').addEventListener('click',()=>{download((project.title||'검수')+'_클라이언트검수.html',clientHtml(project,token),'text/html');toast('클라이언트 HTML을 저장했어요');});
+  box.innerHTML=`<b>클라이언트에게 보낼 안내</b>
+    <textarea readonly id="pjGuide" rows="8">${esc(guide)}</textarea>
+    <div class="inline"><button class="btn small primary" id="pjCopyGuide">안내 문구 복사 (카톡·메일용)</button>${link?'<button class="btn small" id="pjCopy">링크만 복사</button>':''}</div>
+    ${link?`<input type="text" readonly value="${esc(link)}" id="pjLink">`:`<div style="color:#8a5a00;margin-top:6px"><b>링크를 만들 수 없어요.</b> 서버 설정에서 '이 앱의 공개 주소'를 채우거나, 아래 HTML 파일로 전달하세요.</div>`}
+    ${isFile?`<div style="margin-top:8px"><b>동봉용 HTML</b> — 웹 주소 없이도 열리는 파일 (열면 같은 로그인 화면이 나와요). 영상 파일과 함께 보내세요.<br><button class="btn small" id="pjHtml">클라이언트 HTML 내려받기</button></div>`:''}
+    <small style="color:var(--muted);display:block;margin-top:8px">비밀번호는 서버에 암호화(해시)되어 저장돼 <b>지금만</b> 볼 수 있어요. 잊으면 서버 프로젝트 목록에서 '비번 재설정'을 누르세요.</small>`;
+  $('#pjCopyGuide').addEventListener('click',async()=>{toast(await copyText(guide)?'안내 문구를 복사했어요. 카톡에 붙여 넣으세요':'복사 실패 — 직접 선택해 복사하세요');});
+  const copyBtn=$('#pjCopy');if(copyBtn)copyBtn.addEventListener('click',async()=>{toast(await copyText(link)?'링크를 복사했어요':'복사 실패');});
+  const h=$('#pjHtml');if(h)h.addEventListener('click',()=>{download((project.title||'검수')+'_클라이언트검수.html',clientHtml(project),'text/html');toast('클라이언트 HTML을 저장했어요');});
 }
 $('#pjCreate').addEventListener('click',createProject);
 
-/* --- 운영자: 서버 프로젝트 목록 --- */
+/* --- 관리자: 서버 프로젝트 목록 --- */
 async function openProjects(){
-  if(!Sync.configure('operator')){toast('먼저 서버 설정을 채워 주세요');openServerSettings();return;}
+  if(!needAdmin('서버 프로젝트를 보려면'))return;
   openModal('mProjects');await loadProjects();
 }
 async function loadProjects(){
   const st=$('#plStatus'),list=$('#plist');st.className='status';st.textContent='불러오는 중…';list.innerHTML='';
-  const opCfg={url:S.server.url.replace(/\/+$/,''),headers:{apikey:S.server.anonKey,Authorization:'Bearer '+S.server.anonKey,'Content-Type':'application/json','x-operator-key':S.server.operatorKey}};
+  const cfg=opCfg();
   try{
     const arch=$('#plArchived').checked;
-    const rows=await Sync.rest('GET',`projects?select=id,title,source_kind,youtube_id,file_name,file_size,aspect,fps,review_token,archived,created_at,updated_at${arch?'':'&archived=eq.false'}&order=created_at.desc&limit=200`,null,null,opCfg);
+    const rows=await Sync.rest('GET',`projects?select=id,title,source_kind,youtube_id,file_name,file_size,aspect,fps,client_login,archived,created_at,updated_at${arch?'':'&archived=eq.false'}&order=created_at.desc&limit=200`,null,null,cfg);
     const counts={};
-    try{(await Sync.rest('GET','annotations?select=project_id,deleted_at,updated_at&deleted_at=is.null',null,null,opCfg)||[]).forEach(a=>{const c=counts[a.project_id]||(counts[a.project_id]={n:0,last:''});c.n++;if(a.updated_at>c.last)c.last=a.updated_at;});}catch{}
+    try{(await Sync.rest('GET','annotations?select=project_id,deleted_at,updated_at&deleted_at=is.null',null,null,cfg)||[]).forEach(a=>{const c=counts[a.project_id]||(counts[a.project_id]={n:0,last:''});c.n++;if(a.updated_at>c.last)c.last=a.updated_at;});}catch{}
     st.textContent=rows.length?`${rows.length}개`:'아직 프로젝트가 없어요. 영상을 연 뒤 서버 ▾ → 클라이언트 검수 만들기.';
-    list.innerHTML=rows.map(p=>{const c=counts[p.id]||{n:0,last:''};return `<div class="p" data-id="${p.id}"><div class="pt"><b>${esc(p.title||'(제목 없음)')}${p.archived?' <small>(보관)</small>':''}</b><small>${p.source_kind==='youtube'?'유튜브 '+esc(p.youtube_id||''):'파일 '+esc(p.file_name||'')} · 메모 ${c.n}개${c.last?' · 최근 '+new Date(c.last).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):''} · ${new Date(p.created_at).toLocaleDateString('ko-KR')}</small></div><div class="acts"><button class="btn small primary" data-act="open">열기</button><button class="btn small" data-act="link">링크</button><button class="btn small" data-act="html">HTML</button><button class="btn small" data-act="arch">${p.archived?'복원':'보관'}</button></div></div>`;}).join('');
+    list.innerHTML=rows.map(p=>{const c=counts[p.id]||{n:0,last:''};return `<div class="p" data-id="${p.id}"><div class="pt"><b>${esc(p.title||'(제목 없음)')}${p.archived?' <small>(보관)</small>':''}</b><small>${p.source_kind==='youtube'?'유튜브 '+esc(p.youtube_id||''):'파일 '+esc(p.file_name||'')} · 아이디 ${esc(p.client_login||'(없음)')} · 메모 ${c.n}개${c.last?' · 최근 '+new Date(c.last).toLocaleString('ko-KR',{month:'numeric',day:'numeric',hour:'2-digit',minute:'2-digit'}):''} · ${new Date(p.created_at).toLocaleDateString('ko-KR')}</small></div><div class="acts"><button class="btn small primary" data-act="open">열기</button><button class="btn small" data-act="guide">안내 복사</button><button class="btn small" data-act="reset">비번 재설정</button>${p.source_kind==='file'?'<button class="btn small" data-act="html">HTML</button>':''}<button class="btn small" data-act="arch">${p.archived?'복원':'보관'}</button></div></div>`;}).join('');
     list.onclick=async e=>{
       const b=e.target.closest('button[data-act]');if(!b)return;const row=e.target.closest('.p');const p=rows.find(r=>r.id===row.dataset.id);if(!p)return;
-      if(b.dataset.act==='link'){const l=clientLink(p,p.review_token);if(!l){toast("서버 설정에서 '이 앱의 공개 주소'를 먼저 채워 주세요");return;}toast(await copyText(l)?'클라이언트 링크를 복사했어요':'복사 실패');}
-      else if(b.dataset.act==='html'){download((p.title||'검수')+'_클라이언트검수.html',clientHtml(p,p.review_token),'text/html');toast('클라이언트 HTML을 저장했어요');}
-      else if(b.dataset.act==='arch'){try{await Sync.rest('PATCH',`projects?id=eq.${p.id}`,{archived:!p.archived},'return=minimal',opCfg);loadProjects();}catch(err){toast('실패: '+err.message);}}
+      if(b.dataset.act==='guide'){toast(await copyText(guideText(p,p.client_login||'',''))?'안내 문구를 복사했어요 (비밀번호는 처음 알려 준 것)':'복사 실패');}
+      else if(b.dataset.act==='reset'){
+        const v=prompt(`"${p.title}" 클라이언트의 새 비밀번호 (비우면 자동으로 만들어요)\n바꾸면 기존 비밀번호로 로그인한 화면은 다시 로그인해야 해요.`,'');
+        if(v===null)return;const pw=v.trim()||randPassword();if(pw.length<4){toast('비밀번호는 4자 이상');return;}
+        const login=p.client_login||prompt('클라이언트 아이디를 정해 주세요','')||'';if(!LOGIN_RE.test(login)){toast('아이디는 2~40자의 한글·영문·숫자');return;}
+        try{await Sync.rest('POST','rpc/set_client_credentials',{pid:p.id,login,password:pw},null,cfg);p.client_login=login;
+          toast(await copyText(guideText(p,login,pw))?`새 비밀번호 ${pw} — 안내 문구를 복사했어요`:`새 비밀번호: ${pw}`,6000);loadProjects();}
+        catch(err){toast('실패: '+err.message);}
+      }
+      else if(b.dataset.act==='html'){download((p.title||'검수')+'_클라이언트검수.html',clientHtml(p),'text/html');toast('클라이언트 HTML을 저장했어요');}
+      else if(b.dataset.act==='arch'){try{await Sync.rest('PATCH',`projects?id=eq.${p.id}`,{archived:!p.archived},'return=minimal',cfg);loadProjects();}catch(err){toast('실패: '+err.message);}}
       else if(b.dataset.act==='open'){closeModals();await openServerProject(p);}
     };
-  }catch(e){st.className='status bad';st.textContent=e.status===401?'anon 키/URL 확인 (401)':'불러오지 못했어요: '+e.message;}
+  }catch(e){st.className='status bad';st.textContent=e.status===401?'로그인이 필요하거나 권한이 없어요 (401)':'불러오지 못했어요: '+e.message;}
 }
 async function openServerProject(p){
   if(S.editing)finishEdit('implicit');
@@ -1425,49 +1636,73 @@ async function openServerProject(p){
   render();toast(`서버 프로젝트 연결됨 · 메모 ${S.memos.length}개`);
 }
 $('#btnServer').addEventListener('click',e=>{e.stopPropagation();$('#serverMenu').classList.toggle('open');});
-$('#serverMenu .dd').addEventListener('click',e=>{const b=e.target.closest('button');$('#serverMenu').classList.remove('open');if(!b)return;
+$('#serverMenu .dd').addEventListener('click',async e=>{const b=e.target.closest('button');$('#serverMenu').classList.remove('open');if(!b)return;
   if(b.id==='btnServerSettings')openServerSettings();else if(b.id==='btnNewProject')openNewProject();else if(b.id==='btnProjects')openProjects();
-  else if(b.id==='btnDisconnect'){if(!S.remote){toast('연결된 서버 프로젝트가 없어요');return;}if(Sync.pending.size&&!confirm(`아직 서버에 보내지 못한 변경 ${Sync.pending.size}건이 있어요. 그래도 끊을까요?`))return;Sync.disconnect();toast('서버 동기화를 끊었어요 (메모는 이 브라우저에 남아요)');render();}});
+  else if(b.id==='btnDisconnect'){if(!S.remote){toast('연결된 서버 프로젝트가 없어요');return;}if(Sync.pending.size&&!confirm(`아직 서버에 보내지 못한 변경 ${Sync.pending.size}건이 있어요. 그래도 끊을까요?`))return;Sync.disconnect();toast('서버 동기화를 끊었어요 (메모는 이 브라우저에 남아요)');render();}
+  else if(b.id==='btnLogout'){
+    if(!Auth.sess){if(!Auth.base()){openServerSettings();return;}showAdminGate();return;}
+    if(Sync.pending.size&&!confirm(`아직 서버에 보내지 못한 변경 ${Sync.pending.size}건이 있어요. 그래도 로그아웃할까요?`))return;
+    Sync.disconnect();await Auth.signOut();updateWho();render();showAdminGate('로그아웃했어요.');
+  }});
 $('#plRefresh').addEventListener('click',loadProjects);$('#plArchived').addEventListener('change',loadProjects);
 
-/* --- 클라이언트 모드 시작 --- */
-async function startClient(){
+/* --- 클라이언트 --- */
+const ClientCache={
+  key(){return 'hhss:client:'+CLIENT.projectId;},
+  get(){try{return JSON.parse(localStorage.getItem(this.key())||'null');}catch{return null;}},
+  set(v){try{localStorage.setItem(this.key(),JSON.stringify(v));}catch{}},
+  del(){try{localStorage.removeItem(this.key());}catch{}}
+};
+async function bootClient(){
   document.body.classList.add('client');
   $('#authorWrap').hidden=false;$('#authorName').value=S.author;
   $('#authorName').addEventListener('change',()=>{S.author=$('#authorName').value.trim();try{localStorage.setItem('hhss:author',S.author);}catch{}render();});
   titleEl.readOnly=true;
   if(CLIENT.server&&CLIENT.server.url){S.server.url=CLIENT.server.url;S.server.anonKey=CLIENT.server.anonKey||S.server.anonKey;}
+  $('#drop b').textContent='검수 준비 중…';$('#drop span').textContent='';$('#dropYt').closest('.droplink').hidden=true;
   renderSync();
-  if(!Sync.configure('client',CLIENT.token)){showDropError('<b>검수 페이지 설정이 비어 있어요.</b>운영자에게 다시 링크(또는 파일)를 요청해 주세요. (서버 주소/공개 키 없음)');return;}
-  const tmpCfg=Sync.cfg;
-  $('#drop b').textContent='검수 준비 중…';$('#drop span').textContent='';
-  let project=null;
-  try{const rows=await Sync.rest('GET',`projects?id=eq.${encodeURIComponent(CLIENT.projectId)}&select=id,title,source_kind,youtube_id,file_name,file_size,aspect,fps,archived`,null,null,tmpCfg);project=rows&&rows[0];}
-  catch(e){
-    /* 서버에 닿지 못함: 동봉 HTML의 설정이나 이 브라우저에 남은 자동 저장본에서 프로젝트 정보를 꺼내 오프라인으로 진행 */
-    let src=CLIENT.source?{title:CLIENT.title,source:CLIENT.source}:null;
-    if(!src){const cached=await KV.get('vreview:auto:p:'+CLIENT.projectId);if(cached&&cached.remote&&cached.remote.source)src={title:cached.remote.title,source:cached.remote.source};}
-    if(src){project={id:CLIENT.projectId,title:src.title||'',source_kind:src.source.kind,youtube_id:src.source.youtubeId||null,file_name:src.source.fileName||null,file_size:src.source.fileSize||null,aspect:src.source.aspect||'16:9'};toast('서버에 연결하지 못해 임시로 진행해요. 메모는 연결되면 자동 전송됩니다.',5000);}
-    else{showDropError(`<b>서버에 연결하지 못했어요.</b>인터넷 연결을 확인하고 새로고침해 주세요. (${esc(e.message)})`);return;}
+  if(!Auth.base()){showDropError('<b>검수 페이지 설정이 비어 있어요.</b>관리자에게 다시 링크를 요청해 주세요. (서버 주소/공개 키 없음)');return;}
+  const c=ClientCache.get();
+  if(c&&c.token){
+    let p=null;
+    try{p=await Sync.rest('POST','rpc/client_project',{pid:CLIENT.projectId},null,clientCfg(c.token));}
+    catch(e){if(!e.status&&c.project){toast('인터넷에 연결되지 않아 이 PC에 저장된 내용으로 열어요. 보내기는 연결된 뒤에 돼요.',5000);return startClientProject(c.project,c.token);}}
+    if(p){ClientCache.set({...c,project:p});return startClientProject(p,c.token);}
+    ClientCache.del();if(c.login)$('#gateId').value=c.login;
+    showClientGate('로그인 정보가 바뀌었거나 검수가 마감됐어요. 다시 로그인해 주세요.');return;
   }
-  if(!project){showDropError('<b>이 링크로 열 수 있는 검수 프로젝트가 없어요.</b>링크가 바뀌었거나 만료됐을 수 있어요. 운영자에게 새 링크를 요청해 주세요.');return;}
+  showClientGate();
+}
+async function startClientProject(project,token){
   S.remote={projectId:project.id};
   await restoreAutosaveIfAny();
-  await attachRemote(project,'client',CLIENT.token);
+  await attachRemote(project,'client',token);
   S.title=project.title||'';titleEl.value=S.title;
   if(project.source_kind==='youtube'){
-    if(location.protocol==='file:')showDropError('<b>이 검수는 유튜브 영상이라 파일로 연 상태에선 재생할 수 없어요.</b>운영자가 보낸 링크(https://…)로 열어 주세요.');
+    if(location.protocol==='file:')showDropError('<b>이 검수는 유튜브 영상이라 파일로 연 상태에선 재생할 수 없어요.</b>관리자가 보낸 링크(https://…)로 열어 주세요.');
     else await openYouTube(project.youtube_id);
   }else{
     $('#drop b').textContent=`받으신 영상 파일을 여기에 끌어다 놓으세요`;
-    $('#drop span').innerHTML=`<b>${esc(project.file_name||'')}</b>${project.file_size?` (${(project.file_size/1048576).toFixed(1)} MB)`:''} — 운영자가 함께 보낸 그 파일이에요. 또는 위의 '영상 파일 열기'`;
-    $('#dropYt').closest('.droplink').hidden=true;
-    $('#btnVideo').className='btn primary';$('#btnVideo').textContent='영상 파일 열기';$('#sourceMenu').after($('#btnVideo'));
+    $('#drop span').innerHTML=`<b>${esc(project.file_name||'')}</b>${project.file_size?` (${(project.file_size/1048576).toFixed(1)} MB)`:''} — 관리자가 함께 보낸 그 파일이에요. 또는 위의 '영상 파일 열기'`;
+    $('#btnVideo').className='btn';$('#btnVideo').textContent='영상 파일 열기';$('#sourceMenu').after($('#btnVideo'));
   }
   render();
+  let seen=false;try{seen=!!localStorage.getItem('hhss:helpSeen');}catch{}
+  if(!seen){openModal('mHelpClient');try{localStorage.setItem('hhss:helpSeen','1');}catch{}}
 }
-if(CLIENT){startClient();}
-else{renderSync();}
+async function sendRequests(){
+  if(S.editing)finishEdit('implicit');
+  if(!Sync.enabled()){toast('서버에 연결되지 않았어요. 내보내기 → 메모 전체 복사로 카톡에 보내 주세요.',4500);return;}
+  if(!Sync.pending.size){toast(Sync.lastSaved?'새로 보낼 수정 요청이 없어요. 모두 전달됐어요 ✓':'아직 보낼 수정 요청이 없어요. 화면에서 고칠 곳을 클릭해 적어 주세요.',3500);return;}
+  if(!S.author){toast('누가 보낸 요청인지 알 수 있게 위쪽 검토자 칸에 이름을 먼저 적어 주세요.',4500);$('#authorName').focus();return;}
+  const n=Sync.pending.size,ok=await Sync.flush();
+  if(ok){toast(`수정 요청 ${n}건을 보냈어요 ✓ 더 찍고 다시 누르면 새로 쓴 것만 보내져요.`,5000);return;}
+  if(Sync.authLost){ClientCache.del();showClientGate('로그인 정보가 바뀌었어요. 다시 로그인한 뒤 보내 주세요. 작성한 메모는 그대로 있어요.');return;}
+  toast('보내지 못했어요. 인터넷을 확인하고 다시 눌러 주세요. 계속 안 되면 내보내기 → 메모 전체 복사로 보내 주세요.',6000);
+}
+$('#btnSend').addEventListener('click',sendRequests);
+if(CLIENT)bootClient();
+else bootAdmin();
 
 /* ---------- 모달 ---------- */
 const modalOpen=()=>!!document.querySelector('.modal.open');
@@ -1526,7 +1761,7 @@ $('#btnOpen').addEventListener('click',()=>$('#fileProject').click());
 $('#fileProject').addEventListener('change',e=>{if(e.target.files[0])openProjectFile(e.target.files[0]);e.target.value='';});
 $('#btnSave').addEventListener('click',saveProject);
 $('#btnSettings').addEventListener('click',openSettings);
-$('#btnHelp').addEventListener('click',()=>openModal('mHelp'));
+$('#btnHelp').addEventListener('click',()=>openModal(CLIENT?'mHelpClient':'mHelp'));
 $('#btnExport').addEventListener('click',e=>{e.stopPropagation();$('#exportMenu').classList.toggle('open');});
 document.addEventListener('click',e=>{
   if(!e.target.closest('#sourceMenu'))$('#sourceMenu').classList.remove('open');
@@ -1641,6 +1876,7 @@ list.addEventListener('click',e=>{
 
 document.addEventListener('keydown',e=>{
   if(e.target.matches('input,textarea,select'))return;
+  if(!$('#gate').hidden)return;
   if(modalOpen()){if(e.key==='Escape')closeModals();return;}
   const c=e.code;
   if((e.ctrlKey||e.metaKey)&&c==='KeyS'){e.preventDefault();saveProject();return;}
@@ -1661,7 +1897,7 @@ document.addEventListener('keydown',e=>{
     case'KeyM':e.preventDefault();createMemo();break;
     case'Enter':if(S.editing){e.preventDefault();cText.focus();cText.selectionStart=cText.selectionEnd=cText.value.length;}break;
     case'Escape':if(S.editing)finishEdit('cancel');else{S.selectedId=null;render();}break;
-    case'Slash':if(e.shiftKey){e.preventDefault();openModal('mHelp');}break;
+    case'Slash':if(e.shiftKey){e.preventDefault();openModal(CLIENT?'mHelpClient':'mHelp');}break;
     case'Delete':case'Backspace':if(S.selectedId&&!S.editing){e.preventDefault();deleteMemo(S.selectedId);}break;
   }
 });
