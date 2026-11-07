@@ -34,10 +34,10 @@ const SERVER_DEFAULT={url:'https://abcdefgh.supabase.co',anonKey:'eyJ...'};
 
 유튜브 영상 검수와 클라이언트 링크는 `https://` 주소에서만 동작합니다 (파일로 직접 열면 유튜브가 재생을 거부함).
 
-1. GitHub 저장소(예: `Director-s-Board-HHSS`)에 이 폴더의 파일을 올립니다. 최소한 `index.html` 하나면 됩니다.
-2. 저장소 **Settings → Pages** → Build and deployment: Source **Deploy from a branch**, Branch **main / (root)** → Save.
-3. 1~2분 뒤 같은 화면에 주소가 뜹니다: `https://아이디.github.io/Director-s-Board-HHSS/`
-4. 고칠 때마다 `index.html` 을 같은 이름으로 다시 올리면 1~2분 안에 반영됩니다. 이미 만든 클라이언트 링크는 그대로 유효합니다.
+1. 저장소: https://github.com/Gotoseoulhuh/Director-HHSS (이미 올라가 있음). 고칠 때는 `index.html`을 같은 이름으로 다시 올리면 됩니다.
+2. 배포는 `.github/workflows/pages.yml` 이 main 푸시마다 자동으로 합니다 (Actions 탭에서 진행 확인).
+3. 공개 주소: **https://gotoseoulhuh.github.io/Director-HHSS/** — 운영자 설정의 '이 앱의 공개 주소'에 이 값을 넣습니다.
+4. 이미 만든 클라이언트 링크는 파일을 다시 올려도 그대로 유효합니다.
 
 저장소가 Public이어도 괜찮습니다. 올라가는 것은 앱 코드와 공개 키뿐이고, 영상·주석은 Supabase와 사용자 PC에만 있습니다.
 
@@ -47,7 +47,7 @@ const SERVER_DEFAULT={url:'https://abcdefgh.supabase.co',anonKey:'eyJ...'};
 2. **서버 ▾ → 서버 설정** 에 네 칸을 채웁니다.
    - Supabase 프로젝트 URL, anon 키 (2번과 같은 값)
    - 운영자 키 (1-3에서 정한 값 — 이 브라우저에만 저장됨)
-   - 이 앱의 공개 주소 (3번의 Pages 주소) — 클라이언트 링크를 만들 때 씁니다
+   - 이 앱의 공개 주소: `https://gotoseoulhuh.github.io/Director-HHSS/` — 클라이언트 링크를 만들 때 씁니다
 3. **연결 테스트** → "연결 확인 ✓ 운영자 권한 OK" 가 나오면 **저장**.
    - "운영자 키가 맞지 않아요" → 1-3의 SQL을 다시 확인
    - 401 → anon 키 또는 URL이 다른 프로젝트

@@ -5,7 +5,7 @@
 
 - 앱 전체가 `index.html` 한 파일 (HTML + CSS + JS, 프레임워크·빌드 없음)
 - 영상 파일은 사용자 PC 밖으로 나가지 않음 (서버에는 시간·좌표·글·그림·캡처 이미지만 저장)
-- 서버: Supabase (Postgres + RLS), 호스팅: GitHub Pages — 설정은 [SETUP.md](SETUP.md)
+- 서버: Supabase (Postgres + RLS), 호스팅: GitHub Pages **https://gotoseoulhuh.github.io/Director-HHSS/** — 설정은 [SETUP.md](SETUP.md)
 
 ## 실행
 

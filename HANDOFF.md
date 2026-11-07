@@ -6,7 +6,7 @@
 
 - 이 폴더는 **동작하는 앱 전체**입니다. 서버 연결 코드와 SQL까지 들어 있지만, **실제 Supabase 프로젝트와 GitHub Pages에는 아직 연결·배포하지 않았습니다** (운영자의 URL·anon 키를 아직 받지 못함). 연결 절차는 `SETUP.md`.
 - 서버 연결 코드는 Supabase(PostgREST)와 같은 규칙을 구현한 **모의 서버**(`tests/mock_supabase.js`)로 검증했습니다. 실제 서버에서 첫 연결 테스트와 메모 왕복 1회는 운영자가 확인해야 합니다.
-- GitHub 저장소 `https://github.com/Osense/Director-s-Board-HHSS` 에는 푸시하지 않았습니다. 푸시 범위는 운영자가 정합니다.
+- GitHub 저장소: https://github.com/Gotoseoulhuh/Director-HHSS (2026-11-07 푸시). GitHub Pages: https://gotoseoulhuh.github.io/Director-HHSS/ — `.github/workflows/pages.yml`이 main 푸시마다 자동 배포.
 - 이전 버전(ver1.1)과의 호환: 프로젝트 JSON(v3)·공유 HTML은 그대로 읽힙니다. 불러올 때 메모 id를 **유지**합니다(이전에는 새로 만들었음).
 
 ## 이번에 구현한 것 (2026-11-06)
@@ -31,7 +31,7 @@
 
 ## 아직 하지 않은 것 / 알려진 한계
 
-- **실제 Supabase 연결·GitHub Pages 배포** — 운영자가 SETUP 1~4를 진행하거나, URL·anon 키를 주면 `SERVER_DEFAULT`를 채워 드릴 수 있음. 운영자 키는 절대 파일에 넣지 않음.
+- **실제 Supabase 연결** — Pages 배포는 끝남. Supabase는 운영자가 SETUP 1~2를 진행하고 URL·anon 키를 `SERVER_DEFAULT`에 채워야 클라이언트 링크 저장이 동작함. 운영자 키는 절대 파일에 넣지 않음.
 - **댓글 서버 동기화** — `comments` 테이블과 읽기(`select=*,comments(*)`)는 준비됐지만, 앱은 아직 댓글을 서버에 **쓰지 않습니다**. 공유 보고서의 댓글은 그 HTML/브라우저에만 남습니다.
 - **썸네일 저장 위치** — DB text 컬럼(base64, 행당 ≤1.2MB). 규모가 커지면 Supabase Storage(버킷 `thumbs`, 경로 `project_id/annotation_id.jpg`)로 옮기고 `annotations.thumb_path` 추가 + Storage RLS를 써야 함. 토큰 헤더가 Storage API까지 전달되는지는 별도 확인 필요해서 이번에는 DB에 넣었음.
 - **운영자 인증** — 공유 비밀(운영자 키) 모델. 여러 운영자/감사 로그가 필요하면 Supabase Auth(매직 링크)로 교체: `is_operator()`를 `auth.uid()` 기반으로 바꾸고 앱에 로그인 UI 추가.
