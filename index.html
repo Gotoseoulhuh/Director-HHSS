@@ -41,6 +41,9 @@ main{flex:1;display:flex;min-height:0}
    일시정지 때 플레이어 위쪽에 뜨는 제목 띠와 아래쪽 로고·그라데이션이 잘린 영역에 놓여 화면에 겹치지 않는다. 영상 그림은 그대로 다 보인다. */
 #yt iframe,#ytFrame{position:absolute;left:0;top:0;width:100%;height:100%;border:0}
 #ytShield{position:absolute;inset:0;z-index:2} /* 플레이어로 가는 마우스 이벤트 차단: 유튜브 자체 UI가 뜨지 않게 */
+#stage.capturing #overlay>*{visibility:hidden} /* 장면 캡처 순간엔 핀·그림을 숨김 */
+#stage.capturing .hint{display:none}
+.ytbar .btn.cap-on{background:#e8f6ee;border-color:#9fd8b6;color:#1d7a4a}
 #overlay{position:absolute;cursor:crosshair;display:none;z-index:3}
 .annotation-svg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible}
 #overlay{touch-action:none}
@@ -268,6 +271,8 @@ body.client #btnHelp{border-color:var(--accent);color:var(--accent)}
     <div class="ytbar" id="ytbar" hidden>
       <span class="tag">YouTube</span><span class="yt-title" id="ytTitle"></span>
       <span class="cap" id="ytAspectInfo" role="button" tabindex="0" title="핀 위치 계산에 쓰는 영상 비율 — 자동 감지. 틀리면 눌러서 바꿀 수 있어요"></span>
+      <button class="btn small op-only" id="btnCapture" title="관리자 전용: 이 탭 화면을 공유해 핀·그림을 찍을 때 장면을 썸네일로 저장합니다">장면 캡처 켜기</button>
+      <button class="btn small op-only" id="btnFillThumbs" hidden title="썸네일이 없는 메모(클라이언트 요청 포함)의 장면을 차례로 찍어 채웁니다">썸네일 채우기</button>
       <a id="ytOpenLink" href="#" target="_blank" rel="noopener">유튜브에서 보기 ↗</a>
     </div>
     <div class="controls">
@@ -638,6 +643,7 @@ function checkPicture(){
 }
 function destroyPlayer(){
   gesture=null;
+  if(Grab.active)Grab.stop();
   if(S.editing)finishEdit('implicit');
   if(P)P.destroy();
   P=null;S.mode=null;S.ytId='';S.ytTitle='';S.codec='';S.noPicture=false;S.ytAspect='';S.ytAspectSource='';S.ytAspectManual='';setFps({source:'none'});
@@ -733,7 +739,8 @@ const YtP={
   setVolume(v){try{this.player.setVolume(Math.round(v*100));}catch{}},
   size(){const [w,h]=(ytAspect()).split(':').map(Number);return{w:w||16,h:h||9};},
   /* 유튜브는 캡처하지 않는다: 영상은 플레이어에 그대로 두고 시간과 핀 위치만 기록 */
-  async snap(){this.pause();return{t:this.time(),thumb:''};},
+  /* 장면 캡처가 켜져 있으면(관리자) 멈춘 화면을 찍고, 아니면 시간·위치만 기록 */
+  async snap(){this.pause();const t=this.time();if(!Grab.active)return{t,thumb:''};await sleep(220);return{t,thumb:await Grab.shot()};},
   destroy(){try{this.player&&this.player.destroy();}catch{}this.player=null;this._ready=false;this._state=-1;this._dur=0;this._wantPaused=false;this._target=null;}
 };
 const YT_FILE_MSG=`<b>유튜브 검수는 웹 주소로 연 경우에만 돼요.</b>HTML 파일을 직접 연 상태(file://)에서는 유튜브가 재생을 거부합니다. GitHub Pages에 올린 주소로 열거나, 이 폴더의 '검수기 실행.cmd'(로컬 웹 주소)로 시작한 뒤 링크를 다시 넣어 주세요.`;
@@ -857,6 +864,71 @@ function stepFrame(d){if(!P||!P.ready())return;P.pause();P.seek(P.time()+d/effec
 
 /* ---------- 메모 ---------- */
 const sortMemos=()=>S.memos.sort((a,b)=>a.t-b.t||(a.created<b.created?-1:1));
+/* ---------- 장면 캡처 (관리자 전용, 유튜브) ----------
+   유튜브 화면은 다른 사이트가 픽셀을 읽을 수 없어서, 관리자가 직접 '장면 캡처 켜기'를 눌러 이 탭을 공유했을 때만 찍는다.
+   클라이언트 화면에는 이 기능이 없다(공유 창이 뜨지 않음). 공유는 '끄기'를 누르거나 탭을 닫을 때까지 유지. */
+const Grab={
+  stream:null,vid:null,active:false,
+  async start(){
+    if(this.active)return true;
+    if(!navigator.mediaDevices||!navigator.mediaDevices.getDisplayMedia){toast('이 브라우저는 화면 캡처를 지원하지 않아요 (크롬·엣지 권장)');return false;}
+    try{
+      toast("공유 창에서 '이 탭'을 고르고 공유를 누르세요",5000);
+      const st=await navigator.mediaDevices.getDisplayMedia({video:{frameRate:30},audio:false,preferCurrentTab:true,selfBrowserSurface:'include',surfaceSwitching:'exclude',monitorTypeSurfaces:'exclude'});
+      const tr=st.getVideoTracks()[0],surf=tr&&tr.getSettings().displaySurface;
+      if(surf&&surf!=='browser'){st.getTracks().forEach(t=>t.stop());toast('창이나 전체 화면이 아니라 이 탭(브라우저 탭)을 골라 주세요',5000);return false;}
+      const v=document.createElement('video');v.muted=true;v.playsInline=true;v.srcObject=st;await v.play();
+      tr.addEventListener('ended',()=>this.stop(true));
+      this.stream=st;this.vid=v;this.active=true;renderGrab();
+      toast('장면 캡처 켜짐 — 이제 핀·그림을 찍으면 장면이 저장돼요',3500);return true;
+    }catch(e){toast(e&&e.name==='NotAllowedError'?'화면 공유를 취소했어요':'장면 캡처를 켜지 못했어요: '+(e&&e.message||e));return false;}
+  },
+  stop(byBrowser){if(this.stream)this.stream.getTracks().forEach(t=>t.stop());this.stream=null;this.vid=null;this.active=false;renderGrab();if(byBrowser)toast('화면 공유가 끝나 장면 캡처를 껐어요');},
+  /* 영상 그림 영역(#overlay)만 잘라 JPEG로. 핀·그림은 잠깐 숨긴다 */
+  async shot(){
+    if(!this.active||!this.vid)return '';
+    stage.classList.add('capturing');
+    try{
+      await new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r)));await sleep(180);
+      const v=this.vid,vw=v.videoWidth,vh=v.videoHeight;if(!vw||!vh)return '';
+      const sx=vw/window.innerWidth,sy=vh/window.innerHeight,r=overlay.getBoundingClientRect();
+      const cx=Math.max(0,r.left*sx),cy=Math.max(0,r.top*sy),cw=Math.min(vw-cx,r.width*sx),ch=Math.min(vh-cy,r.height*sy);
+      if(cw<20||ch<20)return '';
+      const W=Math.min(960,Math.round(cw)),H=Math.round(W*ch/cw);
+      const c=document.createElement('canvas');c.width=W;c.height=H;c.getContext('2d').drawImage(v,cx,cy,cw,ch,0,0,W,H);
+      return c.toDataURL('image/jpeg',0.72);
+    }catch{return '';}
+    finally{stage.classList.remove('capturing');}
+  }
+};
+function missingThumbs(){return P===YtP?S.memos.filter(m=>!m.thumb&&!m.deleted):[];}
+function renderGrab(){
+  const b=$('#btnCapture'),f=$('#btnFillThumbs');if(!b)return;
+  b.textContent=Grab.active?'장면 캡처 중 · 끄기':'장면 캡처 켜기';b.classList.toggle('cap-on',Grab.active);
+  const n=missingThumbs().length;f.hidden=!(Grab.active&&n);f.textContent=`썸네일 채우기 (${n})`;
+}
+let filling=false;
+async function fillThumbs(){
+  if(filling||P!==YtP||!Grab.active)return;
+  const list=missingThumbs();if(!list.length){toast('썸네일이 없는 메모가 없어요');return;}
+  if(S.editing)finishEdit('implicit');
+  filling=true;const back=P.time();let done=0;
+  try{
+    for(const m of list){
+      toast(`썸네일 채우는 중… ${done+1}/${list.length}`,1500);
+      P.pause();P.seek(m.t);
+      for(let i=0;i<40;i++){await sleep(100);if(YtP._state!==3&&Math.abs(YtP.time()-m.t)<0.3&&i>=5)break;} /* 그 장면이 뜰 때까지 */
+      await sleep(350);
+      const img=await Grab.shot();if(!img)continue;
+      if(!S.memos.includes(m))continue;
+      m.thumb=img;changed(m);done++;render();
+    }
+  }finally{filling=false;P.pause();P.seek(back);renderGrab();}
+  toast(`썸네일 ${done}개를 채웠어요`+(Sync.enabled()?' (서버에도 저장)':''),3000);
+}
+$('#btnCapture').addEventListener('click',()=>{if(Grab.active)Grab.stop();else Grab.start();$('#btnCapture').blur();});
+$('#btnFillThumbs').addEventListener('click',()=>{$('#btnFillThumbs').blur();fillThumbs();});
+
 /* 메모가 바뀔 때마다 호출: 수정 번호(rev)·시각을 올리고, 자동 저장과 서버 전송을 예약한다 */
 function changed(m){
   if(m){m.rev=(m.rev||0)+1;m.updated=new Date().toISOString();if(!m.author)m.author=S.author||'';Sync.enqueue(m);}
@@ -987,7 +1059,7 @@ function updateVideoLabel(){
   else{vname.textContent=S.videoName;vname.title=S.videoName;}
 }
 function render(){
-  renderFps();
+  renderFps();renderGrab();
   $('#count').textContent=S.memos.length;
   list.innerHTML=S.memos.length?S.memos.map(cardHTML).join(''):`<div class="empty">아직 메모가 없습니다.<br>보다가 고칠 곳을 화면에서 클릭하세요.</div>`;
   renderMarkers();renderPins(true);renderCompose();updateVideoLabel();

@@ -9,6 +9,10 @@
 - GitHub 저장소: https://github.com/Gotoseoulhuh/Director-HHSS (2026-11-07 푸시). GitHub Pages: https://gotoseoulhuh.github.io/Director-HHSS/ — `.github/workflows/pages.yml`이 main 푸시마다 자동 배포.
 - 이전 버전(ver1.1)과의 호환: 프로젝트 JSON(v3)·공유 HTML은 그대로 읽힙니다. 불러올 때 메모 id를 **유지**합니다(이전에는 새로 만들었음).
 
+## 2026-11-08 추가 (관리자 장면 캡처)
+
+유튜브 썸네일이 필요하다는 요청으로 **관리자 전용·직접 켤 때만** 탭 캡처를 되살림(`Grab`). `getDisplayMedia({preferCurrentTab:true,...})`, 브라우저 탭이 아니면 거절. 켜져 있으면 `YtP.snap()`이 멈춘 뒤 `#overlay` 영역만 잘라 960px JPEG(핀·그림은 `#stage.capturing`으로 숨김). `fillThumbs()`는 썸네일 없는 메모마다 seek → 버퍼링 끝 대기 → 캡처 → `changed(m)`로 서버 반영. 클라이언트에는 버튼 없음(`.op-only`). Space 흔들림의 원인이었던 '멈출 때마다 공유 요청'은 없음.
+
 ## 2026-11-08 변경 (관리자/클라이언트 분리)
 
 | 요청 | 상태 | 비고 |
