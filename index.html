@@ -1646,7 +1646,7 @@ function openNewProject(){
   $('#pjSource').innerHTML=S.mode==='yt'?`유튜브 · ${esc(S.ytTitle||S.ytId)} <small style="color:var(--muted)">(https://youtu.be/${esc(S.ytId)})</small>`:`영상 파일 · <b>${esc(S.videoName)}</b> <small style="color:var(--muted)">${(S.videoSize/1048576).toFixed(1)} MB — 클라이언트에게 이 파일도 함께 보내야 해요</small>`;
   $('#pjLogin').value='';$('#pjPw').value=randPassword();
   $('#pjCount').textContent=S.memos.length;$('#pjUpload').checked=S.memos.length>0;
-  $('#pjStatus').textContent='';$('#pjStatus').className='status';$('#pjResult').hidden=true;$('#pjResult').innerHTML='';$('#pjCreate').disabled=false;
+  $('#pjStatus').textContent='';$('#pjStatus').className='status';$('#pjResult').hidden=true;$('#pjResult').innerHTML='';$('#pjCreate').disabled=false;$('#pjCreate').hidden=false;
   openModal('mProject');setTimeout(()=>$('#pjLogin').focus(),50);
 }
 $('#pjGen').addEventListener('click',()=>{$('#pjPw').value=randPassword();});
@@ -1668,12 +1668,13 @@ async function createProject(){
     if(!upload){autosave();S.memos=[];S.selectedId=null;S.undo=[];if(S.editing){S.editing=null;compose.classList.remove('open');}}
     await attachRemote(project,'operator',null);
     if(upload)S.memos.forEach(m=>Sync.enqueue(m));
-    showProjectResult(project,login,pw,'만들어졌어요. 아래 안내 문구를 복사해 클라이언트에게 보내세요.');
+    showProjectResult(project,login,pw,'✓ 서버에 만들어졌어요. 아래 안내 문구를 복사해 클라이언트에게 보내세요. (다 했으면 닫기)');
   }catch(e){$('#pjCreate').disabled=false;st.className='status bad';st.textContent=e.status===401||e.status===403?'관리자 권한이 없어요. 다시 로그인해 보세요 ('+e.status+')':e.status===404?'schema.sql이 실행되지 않았어요 (404)':'실패: '+e.message;}
 }
 function showProjectResult(project,login,pw,msg){
   const link=clientLink(project),isFile=project.source_kind==='file',guide=guideText(project,login,pw);
   const box=$('#pjResult');box.hidden=false;$('#pjStatus').className='status ok';$('#pjStatus').textContent=msg||'';
+  $('#pjCreate').hidden=true; /* 이미 만들어짐 — 다시 누를 필요 없음 */
   box.innerHTML=`<b>클라이언트에게 보낼 안내</b>
     <textarea readonly id="pjGuide" rows="8">${esc(guide)}</textarea>
     <div class="inline"><button class="btn small primary" id="pjCopyGuide">안내 문구 복사 (카톡·메일용)</button>${link?'<button class="btn small" id="pjCopy">링크만 복사</button>':''}</div>
