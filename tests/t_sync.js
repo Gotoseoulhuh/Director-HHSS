@@ -83,7 +83,7 @@ let failures=0; const ok=(c,m)=>{if(c)console.log('ok  -',m);else{console.log('F
   await addMemo(cl,0.5,0.5,'고객 요청: 여기 자막 키워 주세요');
   await cl.waitForTimeout(1500);
   ok(!mock.db.annotations.find(a=>a.text.startsWith('고객 요청')),'client memo NOT sent before pressing the button');
-  ok((await chip(cl)).includes('보내지 않은 수정 1건')&&(await cl.textContent('#btnSend')).includes('(1)'),'unsent count shown: '+await chip(cl));
+  ok((await chip(cl)).includes('보내지 않은 수정 1건')&&(await cl.textContent('#btnSend .cnt'))==='1','unsent count shown: '+await chip(cl));
   await cl.click('#btnSend'); await cl.waitForTimeout(300);
   ok(!mock.db.annotations.find(a=>a.text.startsWith('고객 요청'))&&await cl.evaluate(()=>document.activeElement.id==='authorName'),'asks for reviewer name before sending');
   await cl.fill('#authorName','김고객'); await cl.press('#authorName','Tab');

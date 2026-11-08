@@ -195,7 +195,17 @@ body.gated main,body.gated header{visibility:hidden}
 .client-only{display:none!important}
 body.client .client-only{display:inline-flex!important}
 body.client #btnExport{background:#fff;color:var(--text);border-color:var(--line)}
-#btnSend{font-size:14px;padding:8px 16px;align-items:center}
+#btnSend{font-size:14px;padding:8px 16px;align-items:center;gap:7px}
+body.client #btnSend{font-size:15px;padding:10px 20px;border-radius:10px;box-shadow:0 4px 14px rgba(47,111,235,.35)}
+#btnSend svg{flex:0 0 auto}
+#btnSend .cnt{background:#fff;color:var(--accent);border-radius:999px;min-width:20px;height:20px;padding:0 6px;font-size:12px;font-weight:800;display:inline-flex;align-items:center;justify-content:center}
+body.client #btnSend.has-pending{animation:sendPulse 2.2s ease-in-out infinite}
+@keyframes sendPulse{0%,100%{box-shadow:0 4px 14px rgba(47,111,235,.35)}50%{box-shadow:0 0 0 7px rgba(47,111,235,.18),0 4px 14px rgba(47,111,235,.35)}}
+@media (prefers-reduced-motion:reduce){body.client #btnSend.has-pending{animation:none}}
+#sendTip{position:fixed;z-index:60;background:#1b2130;color:#fff;font-size:14px;line-height:1.5;padding:10px 36px 10px 14px;border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:260px}
+#sendTip::before{content:'';position:absolute;top:-6px;right:var(--tipx,40px);width:12px;height:12px;background:#1b2130;transform:rotate(45deg)}
+#sendTip button{position:absolute;right:6px;top:6px;background:none;border:0;color:#cfd6e2;font-size:16px;line-height:1;padding:4px;cursor:pointer}
+body.client #fpsBox{display:none}
 #btnHelp{font-weight:700}
 body.client #btnHelp{border-color:var(--accent);color:var(--accent)}
 .modal textarea#pjGuide{width:100%;border:1px solid var(--line);border-radius:8px;padding:8px;font:inherit;font-size:12px;line-height:1.6;margin:6px 0;resize:vertical;background:#fff}
@@ -423,6 +433,7 @@ body.client #btnHelp{border-color:var(--accent);color:var(--accent)}
   <div class="gate-extra" id="gateExtra"></div>
 </div></div>
 
+<div id="sendTip" class="client-tip" hidden role="status"><b>다 적으셨으면</b> 이 파란 버튼을 눌러 보내 주세요. 누르기 전에는 전달되지 않아요.<button type="button" id="sendTipClose" aria-label="안내 닫기">×</button></div>
 <div id="toast"></div>
 
 <script>
@@ -1085,7 +1096,7 @@ function updateVideoLabel(){
   else{vname.textContent=S.videoName;vname.title=S.videoName;}
 }
 function render(){
-  renderFps();renderGrab();
+  renderFps();renderGrab();if(CLIENT&&typeof renderSendTip==='function')renderSendTip(Sync.pending.size);
   $('#count').textContent=S.memos.length;
   list.innerHTML=S.memos.length?S.memos.map(cardHTML).join(''):`<div class="empty">아직 메모가 없습니다.<br>보다가 고칠 곳을 화면에서 클릭하세요.</div>`;
   renderMarkers();renderPins(true);renderCompose();updateVideoLabel();
@@ -1497,7 +1508,12 @@ const Sync={
 function renderSync(){
   const el=$('#syncChip'),send=$('#btnSend');
   const n=Sync.pending.size,when=Sync.lastSaved?new Date(Sync.lastSaved).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}):'';
-  if(send)send.textContent='빠른 수정 요청'+(n?` (${n})`:'');
+  if(send){
+    send.innerHTML='<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 2 11 13"></path><path d="M22 2 15 22l-4-9-9-4 20-7z"></path></svg>빠른 수정 요청'+(n?`<span class="cnt">${n}</span>`:'');
+    send.classList.toggle('has-pending',!!(n&&Sync.manual));
+    send.setAttribute('aria-label','빠른 수정 요청'+(n?`, 보내지 않은 수정 ${n}건`:''));
+    renderSendTip(n);
+  }
   if(!S.remote||!Sync.cfg){el.hidden=!CLIENT;el.className='sync';el.textContent=CLIENT?'로그인 전':'서버 미연결';el.title='';return;}
   el.hidden=false;const st=Sync.status;el.className='sync '+st;el.title='';
   if(Sync.manual)el.textContent=st==='saved'?(when?`모두 보냄 ✓ ${when}`:'보낼 수정 요청 없음'):st==='saving'?'보내는 중…':st==='dirty'?`보내지 않은 수정 ${n}건`:st==='offline'?`인터넷 끊김 · ${n}건 이 PC에 보관`:st==='error'?`보내기 실패 · ${n}건 (다시 눌러 주세요)`:'준비 중…';
@@ -1799,13 +1815,25 @@ async function startClientProject(project,token){
   let seen=false;try{seen=!!localStorage.getItem('hhss:helpSeen');}catch{}
   if(!seen){openModal('mHelpClient');try{localStorage.setItem('hhss:helpSeen','1');}catch{}}
 }
+/* 클라이언트: 아직 안 보낸 메모가 생기면 버튼 아래에 한 번 말풍선 안내 (닫거나 보내면 사라짐) */
+let sendTipDone=false;
+function renderSendTip(n){
+  const tip=$('#sendTip');if(!tip)return;
+  const show=!!(CLIENT&&Sync.manual&&n>0&&!sendTipDone&&$('#gate').hidden&&!S.editing);
+  tip.hidden=!show;if(!show)return;
+  const r=$('#btnSend').getBoundingClientRect(),w=Math.min(260,window.innerWidth-16);
+  const left=Math.max(8,Math.min(window.innerWidth-w-8,r.right-w));
+  tip.style.left=left+'px';tip.style.top=(r.bottom+12)+'px';tip.style.setProperty('--tipx',Math.max(12,Math.min(w-24,(left+w)-(r.left+r.width/2)-6))+'px');
+}
+$('#sendTipClose').addEventListener('click',()=>{sendTipDone=true;$('#sendTip').hidden=true;});
+window.addEventListener('resize',()=>renderSendTip(Sync.pending.size));
 async function sendRequests(){
   if(S.editing)finishEdit('implicit');
   if(!Sync.enabled()){toast('서버에 연결되지 않았어요. 내보내기 → 메모 전체 복사로 카톡에 보내 주세요.',4500);return;}
   if(!Sync.pending.size){toast(Sync.lastSaved?'새로 보낼 수정 요청이 없어요. 모두 전달됐어요 ✓':'아직 보낼 수정 요청이 없어요. 화면에서 고칠 곳을 클릭해 적어 주세요.',3500);return;}
   if(!S.author){toast('누가 보낸 요청인지 알 수 있게 위쪽 검토자 칸에 이름을 먼저 적어 주세요.',4500);$('#authorName').focus();return;}
   const n=Sync.pending.size,ok=await Sync.flush();
-  if(ok){toast(`수정 요청 ${n}건을 보냈어요 ✓ 더 찍고 다시 누르면 새로 쓴 것만 보내져요.`,5000);return;}
+  if(ok){sendTipDone=true;renderSync();toast(`수정 요청 ${n}건을 보냈어요 ✓ 더 찍고 다시 누르면 새로 쓴 것만 보내져요.`,5000);return;}
   if(Sync.authLost){ClientCache.del();showClientGate('로그인 정보가 바뀌었어요. 다시 로그인한 뒤 보내 주세요. 작성한 메모는 그대로 있어요.');return;}
   toast('보내지 못했어요. 인터넷을 확인하고 다시 눌러 주세요. 계속 안 되면 내보내기 → 메모 전체 복사로 보내 주세요.',6000);
 }
