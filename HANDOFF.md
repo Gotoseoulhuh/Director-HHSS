@@ -11,7 +11,7 @@
 
 ## 2026-11-08 추가 (관리자 장면 캡처)
 
-유튜브 썸네일이 필요하다는 요청으로 **관리자 전용·직접 켤 때만** 탭 캡처를 되살림(`Grab`). `getDisplayMedia({preferCurrentTab:true,...})`, 브라우저 탭이 아니면 거절. 켜져 있으면 `YtP.snap()`이 멈춘 뒤 `#overlay` 영역만 잘라 960px JPEG(핀·그림은 `#stage.capturing`으로 숨김). `fillThumbs()`는 썸네일 없는 메모마다 seek → 버퍼링 끝 대기 → 캡처 → `changed(m)`로 서버 반영. 클라이언트에는 버튼 없음(`.op-only`). Space 흔들림의 원인이었던 '멈출 때마다 공유 요청'은 없음.
+유튜브 썸네일이 필요하다는 요청으로 탭 캡처를 되살림(`Grab`). **관리자·클라이언트 모두 기본 켬**: 첫 포인트·그림 클릭 순간 `Grab.start(true)`(허용 창 1회, 메모는 기다리지 않고 만든 뒤 허용되면 `snap.later`로 사진을 붙임), 거절 시 그 접속에선 다시 안 물음(`declined`), '끄기'는 `localStorage hhss:capture=off`로 기억. '썸네일 채우기'만 관리자 전용. `getDisplayMedia({preferCurrentTab:true,...})`, 브라우저 탭이 아니면 거절. 켜져 있으면 `YtP.snap()`이 멈춘 뒤 `#overlay` 영역만 잘라 960px JPEG(핀·그림은 `#stage.capturing`으로 숨김). `fillThumbs()`는 썸네일 없는 메모마다 seek → 버퍼링 끝 대기 → 캡처 → `changed(m)`로 서버 반영. 클라이언트에는 버튼 없음(`.op-only`). Space 흔들림의 원인이었던 '멈출 때마다 공유 요청'은 없음.
 
 ## 2026-11-08 변경 (관리자/클라이언트 분리)
 
