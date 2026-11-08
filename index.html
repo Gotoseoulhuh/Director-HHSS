@@ -1259,7 +1259,7 @@ async function doExport(kind){
      클라이언트가 찍은 메모는 '빠른 수정 요청'을 눌러야 서버로 간다(그 전엔 이 브라우저에만 저장).
    - 브라우저·HTML에 들어가는 값은 공개용(프로젝트 URL, anon 키)뿐. 비밀번호는 서버에 해시로만 저장. service_role 키는 어디에도 넣지 않는다.
    - 메모는 행 단위 upsert(id 기준), 삭제는 deleted_at(soft delete), 충돌은 rev(수정 번호)가 큰 쪽이 이긴다. */
-const SERVER_DEFAULT={url:'',anonKey:''}; /* 배포 전에 운영자가 채움 (공개용 값만) */
+const SERVER_DEFAULT={"url": "https://kpklxrhxmlxjvugthpdp.supabase.co", "anonKey": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtwa2x4cmh4bWx4anZ1Z3RocGRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQwNzA3NTIsImV4cCI6MjEwOTY0Njc1Mn0.Cq4Rj-bjG8oB4VJoTtH9fAYoKatWGi3PwmJBCu0KZQ4"}; /* 배포 전에 운영자가 채움 (공개용 값만) */
 const PRISTINE='<!doctype html>\n'+document.documentElement.outerHTML; /* 클라이언트용 HTML 생성에 쓰는 원본 */
 S.server=Object.assign({url:'',anonKey:'',appUrl:''},SERVER_DEFAULT);
 try{const saved=JSON.parse(localStorage.getItem('hhss:server')||'null');if(saved){delete saved.operatorKey;for(const k of ['url','anonKey','appUrl'])if(saved[k])S.server[k]=saved[k];}}catch{}

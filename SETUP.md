@@ -26,7 +26,7 @@
 
 ## 2. 앱에 공개 값 넣기
 
-두 값을 Claude에게 주면 `index.html`의 `SERVER_DEFAULT`에 넣어 푸시합니다. 직접 하려면 `index.html`에서 `SERVER_DEFAULT`를 찾아(Ctrl+F) 채웁니다.
+✅ 2026-11-08 반영됨 — 프로젝트 `kpklxrhxmlxjvugthpdp`. 프로젝트를 바꾸면 두 값을 다시 넣어 푸시합니다. 직접 하려면 `index.html`에서 `SERVER_DEFAULT`를 찾아(Ctrl+F) 채웁니다.
 
 ```js
 const SERVER_DEFAULT={url:'https://abcdefgh.supabase.co',anonKey:'eyJ...'};
