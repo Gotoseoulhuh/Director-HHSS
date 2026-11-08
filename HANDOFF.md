@@ -53,7 +53,7 @@
 | 운영자 확인 화면 | ✅ | 서버 ▾ → 서버 프로젝트 열기(`loadProjects()`/`openServerProject()`), 카드에 작성자 배지, 댓글 수 |
 | SQL/RLS | ✅ 파일만 | `supabase/schema.sql`: 테이블 3개, `is_operator()`(bcrypt 해시 비교, security definer), `has_project_token()`, 정책, 크기 제한 |
 | 기존 보고서·필름 롤·댓글 HTML | ✅ 유지 | `reportHTML()` 변경 없음 |
-| 유튜브 비율 자동 감지 | ✅ | `detectYtAspect()`: oEmbed(youtube.com → noembed.com 프록시) width/height, 세로 전용 썸네일 `vi/ID/oar2.jpg` 크기. 실패 시 16:9 가정 + 안내. (11-07: 링크 창의 선택 상자는 없앴고, 예외 시 비율 표시 클릭으로 바꿈 → `S.ytAspectManual`) 프로젝트/클라이언트에는 감지된 비율이 전달됨 |
+| 유튜브 비율 자동 감지 | ✅ | `detectYtAspect()`: oEmbed(youtube.com만 — 11-08에 제3자 noembed.com 대체 경로 제거: 일부공개 주소 유출 방지) width/height, 세로 전용 썸네일 `vi/ID/oar2.jpg` 크기. 실패 시 16:9 가정 + 안내. (11-07: 링크 창의 선택 상자는 없앴고, 예외 시 비율 표시 클릭으로 바꿈 → `S.ytAspectManual`) 프로젝트/클라이언트에는 감지된 비율이 전달됨 |
 | 유튜브 스크립트 로딩 진단 | ✅ | `loadYtApi()`가 youtube.com → youtube-nocookie.com 순서로 시도, 실패 원인(script-blocked / api-timeout)과 현재 주소를 표시, 다시 시도 버튼 |
 | 자동 저장 용량 | ✅ | localStorage(5MB) → IndexedDB(`KV`). 썸네일 뺀 경량 사본은 localStorage `:lite`에 백업 |
 | 유튜브에서 캡처 거부 시 | — | (11-07에 탭 캡처 자체를 없앰. 유튜브 메모는 항상 썸네일 없이 시간·위치만 기록) |

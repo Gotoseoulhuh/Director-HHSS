@@ -752,7 +752,7 @@ const YtP={
 const YT_FILE_MSG=`<b>유튜브 검수는 웹 주소로 연 경우에만 돼요.</b>HTML 파일을 직접 연 상태(file://)에서는 유튜브가 재생을 거부합니다. GitHub Pages에 올린 주소로 열거나, 이 폴더의 '검수기 실행.cmd'(로컬 웹 주소)로 시작한 뒤 링크를 다시 넣어 주세요.`;
 /* ---------- 유튜브 영상 비율 ----------
    IFrame API는 영상의 가로세로 비율을 알려주지 않는다. 두 경로로 알아낸다:
-   ① oEmbed(youtube.com → 안 되면 noembed.com 프록시)의 width/height
+   ① 유튜브 oEmbed의 width/height (유튜브 자체 주소만 사용)
    ② 세로 영상 전용 썸네일(i.ytimg.com/vi/ID/oar2.jpg)이 실제 세로 이미지로 오는지 (없으면 120×90 자리표시 이미지가 옴)
    둘 다 실패하면 16:9로 두고 안내. YouTube 줄의 비율 표시를 누르면 그 자리에서 바꿀 수 있다(그 영상에서만, 프로젝트에 저장). */
 const ASPECTS=[[16,9],[9,16],[4,3],[3,4],[1,1],[21,9]];
@@ -781,8 +781,7 @@ async function detectYtAspect(id){
     fetchJson('https://www.youtube.com/oembed?format=json&url='+url,3500),
     probeImage(`https://i.ytimg.com/vi/${id}/oar2.jpg`,4000)
   ]);
-  let oe=oe1;
-  if(!oe||!(+oe.width>0&&+oe.height>0))oe=await fetchJson('https://noembed.com/embed?url='+url,4000);
+  const oe=oe1; /* 제3자 프록시(noembed.com)는 쓰지 않음: 일부공개 영상 주소가 유튜브 밖으로 나가지 않게 */
   if(oe&&+oe.width>0&&+oe.height>0&&!(oe.error))return{aspect:snapAspect(+oe.width,+oe.height),source:'oembed',detail:`${oe.width}×${oe.height}`};
   if(thumb&&thumb.w>=200&&thumb.h>thumb.w)return{aspect:snapAspect(thumb.w,thumb.h),source:'thumb',detail:`세로 썸네일 ${thumb.w}×${thumb.h}`};
   if(thumb&&thumb.w>=200)return{aspect:'16:9',source:'thumb',detail:'세로 썸네일 아님'};
