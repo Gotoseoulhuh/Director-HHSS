@@ -326,7 +326,7 @@ body.client #btnHelp{border-color:var(--accent);color:var(--accent)}
   <div class="field"><label for="pjTitle">프로젝트 이름</label><input type="text" id="pjTitle" placeholder="예: 홍보영상 1차 시안" spellcheck="false"></div>
   <div class="field"><label>대상 영상</label><div id="pjSource" style="font-size:13px"></div></div>
   <div class="field"><label for="pjLogin">클라이언트 아이디</label><input type="text" id="pjLogin" placeholder="이 검수에서 쓸 아이디 (2자 이상)" spellcheck="false" autocomplete="off"></div>
-  <div class="field"><label for="pjPw">클라이언트 비밀번호</label><div class="inline"><input type="text" id="pjPw" spellcheck="false" autocomplete="off"><button class="btn small" id="pjGen" type="button">새로 만들기</button></div><small>링크를 연 사람은 이 아이디·비밀번호를 넣어야 검수 화면이 보여요. 이 프로젝트에서만 쓰입니다.</small></div>
+  <div class="field"><label for="pjPw">클라이언트 비밀번호</label><div class="inline"><input type="text" id="pjPw" spellcheck="false" autocomplete="off"><button class="btn small" id="pjGen" type="button">새로 만들기</button></div><small>링크를 연 사람은 이 아이디·비밀번호를 넣어야 검수 화면이 보여요. 이 프로젝트에서만 쓰입니다. 비밀번호는 <b>영문·숫자</b>로(한글 불가).</small></div>
   <label style="display:flex;align-items:center;gap:6px;margin-top:10px;font-size:13px"><input type="checkbox" id="pjUpload" checked> 지금 있는 메모도 함께 올리기 (<span id="pjCount">0</span>개)</label>
   <div class="status" id="pjStatus"></div>
   <div class="result" id="pjResult" hidden></div>
@@ -415,6 +415,7 @@ body.client #btnHelp{border-color:var(--accent);color:var(--accent)}
   <form id="gateForm" autocomplete="on">
     <label>아이디<input type="text" id="gateId" autocomplete="username" spellcheck="false" autocapitalize="off"></label>
     <label>비밀번호<input type="password" id="gatePw" autocomplete="current-password"></label>
+    <label class="keep"><input type="checkbox" id="gateShowPw"> 비밀번호 보이기</label>
     <label class="keep" id="gateKeepRow"><input type="checkbox" id="gateKeep" checked> 이 기기에서 로그인 유지</label>
     <button class="btn primary" id="gateGo" type="submit">로그인</button>
   </form>
@@ -1366,6 +1367,7 @@ const CLIENT=(()=>{
 const randToken=n=>{const a=new Uint8Array(n);crypto.getRandomValues(a);return Array.from(a,b=>'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789'[b%62]).join('');};
 const randPassword=()=>{const cs='abcdefghjkmnpqrstuvwxyz23456789',a=new Uint8Array(8);crypto.getRandomValues(a);return Array.from(a,b=>cs[b%cs.length]).join('');};
 const LOGIN_RE=/^[A-Za-z0-9가-힣._-]{2,40}$/;
+const PW_RE=/^[\x21-\x7E]{4,64}$/; /* 비밀번호 칸(type=password)은 한글 입력이 막히므로 영문·숫자·기호만 */
 
 /* --- 관리자 로그인 (Supabase Auth, 별도 라이브러리 없이 REST) --- */
 const Auth={
@@ -1525,6 +1527,7 @@ function showClientGate(msg){
   $('#gateKeepRow').hidden=true;$('#gateExtra').innerHTML='';$('#gateForm').hidden=false;
   gateMsg(msg);showGateBase();
 }
+$('#gateShowPw').addEventListener('change',e=>{$('#gatePw').type=e.target.checked?'text':'password';});
 $('#gateExtra').addEventListener('click',e=>{
   const b=e.target.closest('[data-g]');if(!b)return;
   if(b.dataset.g==='server')openServerSettings();
@@ -1659,6 +1662,7 @@ async function createProject(){
   if(!title){st.className='status bad';st.textContent='프로젝트 이름을 넣어 주세요';return;}
   if(!LOGIN_RE.test(login)){st.className='status bad';st.textContent='클라이언트 아이디는 2~40자의 한글·영문·숫자(. _ - 가능)로 정해 주세요';$('#pjLogin').focus();return;}
   if(pw.length<4){st.className='status bad';st.textContent='비밀번호는 4자 이상으로 정해 주세요 (자동 만들기 권장)';return;}
+  if(!PW_RE.test(pw)){st.className='status bad';st.textContent='비밀번호는 영문·숫자·기호로만 정해 주세요. 로그인 화면의 비밀번호 칸에서는 한글이 입력되지 않아요.';$('#pjPw').focus();return;}
   $('#pjCreate').disabled=true;st.textContent='서버에 만드는 중…';
   const id=crypto.randomUUID();
   const project={id,title,source_kind:S.mode==='yt'?'youtube':'file',youtube_id:S.mode==='yt'?S.ytId:null,file_name:S.mode==='file'?S.videoName:null,file_size:S.mode==='file'?S.videoSize:null,aspect:S.mode==='yt'?ytAspect():(video.videoWidth?`${video.videoWidth}:${video.videoHeight}`:null),fps:effectiveFps(),review_token:randToken(40)};
@@ -1711,6 +1715,7 @@ async function loadProjects(){
       else if(b.dataset.act==='reset'){
         const v=prompt(`"${p.title}" 클라이언트의 새 비밀번호 (비우면 자동으로 만들어요)\n바꾸면 기존 비밀번호로 로그인한 화면은 다시 로그인해야 해요.`,'');
         if(v===null)return;const pw=v.trim()||randPassword();if(pw.length<4){toast('비밀번호는 4자 이상');return;}
+        if(!PW_RE.test(pw)){toast('비밀번호는 영문·숫자·기호로만 (비밀번호 칸에선 한글 입력이 안 돼요)',4000);return;}
         const login=p.client_login||prompt('클라이언트 아이디를 정해 주세요','')||'';if(!LOGIN_RE.test(login)){toast('아이디는 2~40자의 한글·영문·숫자');return;}
         try{await Sync.rest('POST','rpc/set_client_credentials',{pid:p.id,login,password:pw},null,cfg);p.client_login=login;
           toast(await copyText(guideText(p,login,pw))?`새 비밀번호 ${pw} — 안내 문구를 복사했어요`:`새 비밀번호: ${pw}`,6000);loadProjects();}
