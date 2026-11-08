@@ -1458,7 +1458,8 @@ $('#gateForm').addEventListener('submit',async e=>{
       }else await startClientProject(p,tok);
     }
   }catch(err){
-    gateMsg(err.status===400||err.status===401?(gateMode==='admin'?'아이디 또는 비밀번호가 맞지 않아요.':'아이디 또는 비밀번호가 맞지 않아요.')
+    gateMsg(/not.?confirmed/i.test((err.code||'')+' '+err.message)?'이메일 인증이 안 된 계정이에요. Supabase에서 인증 처리(SETUP.md 1-3) 후 다시 로그인하세요.'
+      :err.status===400||err.status===401?'아이디 또는 비밀번호가 맞지 않아요.'
       :!err.status?'서버에 닿지 못했어요. 인터넷 연결을 확인해 주세요.'
       :err.status===404?'서버 준비가 덜 됐어요 (schema.sql 미실행). 관리자에게 알려 주세요.':'로그인 실패: '+err.message);
   }finally{go.disabled=false;}
