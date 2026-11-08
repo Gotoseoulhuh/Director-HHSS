@@ -920,12 +920,15 @@ function renderGrab(){
   const b=$('#btnCapture'),f=$('#btnFillThumbs');if(!b)return;
   b.textContent=Grab.active?'장면 캡처 켜짐 · 끄기':'장면 캡처 켜기';b.classList.toggle('cap-on',Grab.active);
   b.title=Grab.active?'포인트·그림을 찍을 때 장면 사진이 함께 저장돼요. 누르면 끕니다':Grab.wanted()?'처음 포인트를 찍을 때 허용 창이 떠요. 지금 눌러 미리 켤 수도 있어요':'꺼져 있어요. 누르면 다시 켭니다';
-  const n=missingThumbs().length;f.hidden=!(Grab.active&&n);f.textContent=`썸네일 채우기 (${n})`;
+  const n=missingThumbs().length;f.hidden=!(n&&!CLIENT);f.textContent=`썸네일 채우기 (${n})`;
+  f.title=Grab.active?'썸네일이 없는 메모의 장면을 차례로 찍어 채웁니다':'누르면 이 탭 공유를 한 번 허용받은 뒤, 썸네일이 없는 메모의 장면을 차례로 찍어 채웁니다';
 }
 let filling=false;
 async function fillThumbs(){
-  if(filling||P!==YtP||!Grab.active)return;
-  const list=missingThumbs();if(!list.length){toast('썸네일이 없는 메모가 없어요');return;}
+  if(filling||P!==YtP)return;
+  if(!missingThumbs().length){toast('썸네일이 없는 메모가 없어요');return;}
+  if(!Grab.active){Grab.setPref(true);Grab.declined=false;if(!await Grab.start(false))return;}
+  const list=missingThumbs();
   if(S.editing)finishEdit('implicit');
   filling=true;const back=P.time();let done=0;
   try{
@@ -1471,13 +1474,15 @@ const Sync={
       const i=S.memos.findIndex(m=>m.id===inc.id),local=i>=0?S.memos[i]:null;
       const editing=S.editing&&local&&S.editing.id===local.id;
       if(inc.deleted){if(local&&!editing){S.memos.splice(i,1);if(S.selectedId===local.id)S.selectedId=null;dirty=true;}continue;}
-      if(!local){S.memos.push(inc);dirty=true;}
+      if(!local){S.memos.push(inc);dirty=true;if(!inc.thumb&&this.cfg&&this.cfg.role==='operator')this.newNoThumb=(this.newNoThumb||0)+1;}
       else if(!editing&&((inc.rev||0)>(local.rev||0)||((inc.rev||0)===(local.rev||0)&&String(inc.updated||'')>String(local.updated||'')))){Object.assign(local,inc);dirty=true;}
       else if(JSON.stringify(local.comments||[])!==JSON.stringify(inc.comments||[])){local.comments=inc.comments;dirty=true;}
     }
     /* 서버에 아직 없는 로컬 메모(연결 전에 만든 것) → 보낼 목록에 넣는다 */
     for(const m of S.memos)if(!seen.has(m.id)&&!this.pending.has(m.id))this.enqueue(m);
     if(dirty){sortMemos();render();scheduleAutosave();}
+    if(this.newNoThumb&&this.lastPull&&P===YtP){toast(`새 수정 요청 ${this.newNoThumb}건이 들어왔어요. 아래 '썸네일 채우기'를 누르면 장면이 채워져요.`,5000);}
+    this.newNoThumb=0;
   },
   async loadPending(){
     this.pending.clear();
