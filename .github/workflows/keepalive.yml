@@ -1,0 +1,30 @@
+# Supabase 무료 프로젝트는 약 1주일 동안 요청이 없으면 일시 정지된다.
+# 3일마다 공개용 키(index.html에도 들어 있는 anon 키)로 가벼운 요청을 하나 보내 깨워 둔다.
+# 데이터는 읽거나 바꾸지 않는다(rpc/is_operator → 로그인 안 한 상태라 false만 돌아옴).
+# 이미 정지된 상태면 이 작업이 실패로 표시되고 GitHub가 저장소 주인에게 메일로 알린다.
+name: Keep Supabase awake
+
+on:
+  schedule:
+    - cron: '17 3 */3 * *'   # 3일마다 03:17 UTC (한국 12:17)
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Supabase
+        env:
+          SB_URL: https://kpklxrhxmlxjvugthpdp.supabase.co
+          SB_ANON: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imtwa2x4cmh4bWx4anZ1Z3RocGRwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTQwNzA3NTIsImV4cCI6MjEwOTY0Njc1Mn0.Cq4Rj-bjG8oB4VJoTtH9fAYoKatWGi3PwmJBCu0KZQ4
+        run: |
+          code=$(curl -s -o body.txt -w '%{http_code}' --max-time 30 -X POST "$SB_URL/rest/v1/rpc/is_operator" \
+            -H "apikey: $SB_ANON" -H "Authorization: Bearer $SB_ANON" -H "Content-Type: application/json" -d '{}') || code=000
+          echo "HTTP $code: $(head -c 200 body.txt 2>/dev/null)"
+          if [ "$code" != "200" ]; then
+            echo "::error::Supabase가 응답하지 않아요. 대시보드에서 프로젝트가 Paused인지 확인하고 Restore 하세요."
+            exit 1
+          fi
